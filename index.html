@@ -262,6 +262,7 @@
   <button data-tab="aprobaciones" onclick="switchTab('aprobaciones')">Aprobaciones</button>
   <button data-tab="gestion" onclick="switchTab('gestion')">Gestión documental</button>
   <button data-tab="datos" onclick="switchTab('datos')">Datos maestros</button>
+  <button data-tab="log" onclick="switchTab('log')">Log de eventos</button>
 </nav>
 
 <main>
@@ -439,6 +440,22 @@
         <div id="mantStats" class="subline" style="margin-top:10px"></div>
       </div>
     </div>
+  </section>
+  <section id="view-log" class="view">
+    <div class="module-head">
+      <div>
+        <h1>Log de eventos</h1>
+        <p>Auditoría de acciones realizadas por los usuarios en el aplicativo.</p>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input id="logFiltro" placeholder="Filtrar por usuario, acción o detalle…" oninput="renderLogFiltrado()" style="min-width:240px">
+        <button class="btn primary sm" onclick="cargarLog()">↻ Actualizar</button>
+      </div>
+    </div>
+    <div class="card"><div style="overflow-x:auto"><table id="logTable">
+      <thead><tr><th style="width:160px">Fecha y hora</th><th style="width:210px">Usuario</th><th style="width:170px">Acción</th><th>Detalle</th></tr></thead>
+      <tbody><tr><td colspan="4"><div class="empty">Pulsa «Actualizar» para cargar los eventos.</div></td></tr></tbody>
+    </table></div></div>
   </section>
 </main>
 
@@ -847,7 +864,7 @@ async function doReset(){
   try{await window.FB.resetPwd(email);loginMsg('Te enviamos un correo para restablecer la contraseña.',true);}
   catch(e){loginMsg(mapAuthError(e));}
 }
-function logout(){if(window.FB&&window.FB.signOut)window.FB.signOut();}
+function logout(){if(currentUser)logEvent('Sesión cerrada','');if(window.FB&&window.FB.signOut)window.FB.signOut();}
 function showLogin(){const s=document.getElementById('loginScreen');if(s)s.style.display='flex';
   const p=document.getElementById('login_pass');if(p)p.value='';}
 function showApp(){const s=document.getElementById('loginScreen');if(s)s.style.display='none';}
@@ -861,13 +878,70 @@ function refreshAuthUI(){
   // El botón de Datos maestros solo para administradores
   const btnDatos=document.querySelector('nav.tabs button[data-tab="datos"]');
   if(btnDatos)btnDatos.classList.toggle('hidden',!esAdmin());
+  const btnLog=document.querySelector('nav.tabs button[data-tab="log"]');
+  if(btnLog)btnLog.classList.toggle('hidden',!esAdmin());
+}
+
+/* ============================================================
+   LOG DE EVENTOS (auditoría · colección Firestore "eventos")
+   ============================================================ */
+function logEvent(accion,detalle){
+  try{
+    const fb=window.FB;if(!fb||!fb.addDoc)return;
+    fb.addDoc(fb.collection(fb.fdb,'eventos'),{
+      ts: fb.serverTimestamp(),
+      tsLocal: new Date().toISOString(),
+      uid: (fb.auth&&fb.auth.currentUser)?fb.auth.currentUser.uid:'',
+      correo: currentUser?currentUser.correo:((fb.auth&&fb.auth.currentUser)?fb.auth.currentUser.email:''),
+      usuario: currentUser?currentUser.nombre:'',
+      accion: accion||'',
+      detalle: detalle||''
+    }).catch(()=>{});
+  }catch(e){/* el log nunca debe romper la app */}
+}
+let logCache=[];
+async function cargarLog(){
+  const fb=window.FB;const tb=document.querySelector('#logTable tbody');
+  if(!fb||!fb.getDocs){tb.innerHTML='<tr><td colspan="4"><div class="empty">Sin conexión.</div></td></tr>';return;}
+  tb.innerHTML='<tr><td colspan="4"><div class="empty">Cargando eventos…</div></td></tr>';
+  try{
+    const q=fb.query(fb.collection(fb.fdb,'eventos'),fb.orderBy('ts','desc'),fb.limit(500));
+    const snap=await fb.getDocs(q);
+    logCache=[];snap.forEach(d=>logCache.push(d.data()));
+    renderLogFiltrado();
+  }catch(e){
+    console.error('log',e);
+    tb.innerHTML='<tr><td colspan="4"><div class="empty">No se pudo cargar el log. Puede deberse a las reglas de Firestore o a un índice faltante.</div></td></tr>';
+  }
+}
+function fmtTs(ev){
+  let d=null;
+  if(ev.ts&&typeof ev.ts.toDate==='function')d=ev.ts.toDate();
+  else if(ev.tsLocal)d=new Date(ev.tsLocal);
+  if(!d||isNaN(d))return '—';
+  return d.toLocaleDateString('es-CO')+' '+d.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+}
+function renderLogFiltrado(){
+  const tb=document.querySelector('#logTable tbody');
+  const f=(document.getElementById('logFiltro').value||'').toLowerCase();
+  const rows=logCache.filter(ev=>!f||[ev.usuario,ev.correo,ev.accion,ev.detalle].some(x=>(x||'').toLowerCase().includes(f)));
+  if(!rows.length){tb.innerHTML='<tr><td colspan="4"><div class="empty">Sin eventos.</div></td></tr>';return;}
+  tb.innerHTML=rows.map(ev=>`<tr>
+    <td style="white-space:nowrap">${esc(fmtTs(ev))}</td>
+    <td>${esc(ev.usuario||'')}${ev.correo?`<div style="color:var(--muted);font-size:11px">${esc(ev.correo)}</div>`:''}</td>
+    <td><span class="badge badge-azul">${esc(ev.accion||'')}</span></td>
+    <td style="font-size:12.5px">${esc(ev.detalle||'')}</td>
+  </tr>`).join('');
+}
+function renderLog(){
+  if(!logCache.length)cargarLog();else renderLogFiltrado();
 }
 
 /* ============================================================
    NAVEGACIÓN
    ============================================================ */
 function switchTab(tab){
-  if(tab==='datos'&&!esAdmin()){toast('Solo el administrador puede acceder a Datos maestros');tab='documentos';}
+  if((tab==='datos'||tab==='log')&&!esAdmin()){toast('Solo el administrador puede acceder a esta sección');tab='documentos';}
   document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-'+tab).classList.add('active');
@@ -876,6 +950,7 @@ function switchTab(tab){
   if(tab==='aprobaciones')renderAprobaciones();
   if(tab==='gestion')renderGestion();
   if(tab==='datos')renderDatos();
+  if(tab==='log')renderLog();
 }
 
 /* ============================================================
@@ -1470,6 +1545,7 @@ function flujo(tipo,id,accion){
       toast('Rechazado → vuelve a revisión (firma de revisión eliminada)');}
     else if(item.estado==='revision'){item.estado='elaboracion';item.elaboro=null;item.reviso=null;item.aprobo=null;
       toast('Rechazado → vuelve a elaboración (firma de elaboración eliminada)');}
+    logEvent('Rechazo',`${tipo} ${item.codigo||''} v${item.version||''} — ${item.nombre||''}`);
     save();renderAprobaciones();
     return;
   }
@@ -1499,6 +1575,7 @@ function flujo(tipo,id,accion){
       }
       toast(obsoletadas?`Aprobado → vigente. ${obsoletadas} versión(es) anterior(es) pasó a obsoleta.`:'Aprobado → documento vigente');
     }
+    logEvent('Firma · '+rolTxt,`${tipo} ${item.codigo||''} v${item.version||''} — ${item.nombre||''}`);
     save();renderAprobaciones();
   });
 }
@@ -2137,8 +2214,10 @@ function guardarFicha(){
   if(!d.nombre){toast('El nombre es obligatorio');return;}
   const arr=fichaCtx.tipo==='documento'?db.documentos:db.registros;
   const idx=arr.findIndex(x=>x.id===d.id);
+  const esNuevo=idx<0;
   if(idx>=0)arr[idx]=d; else arr.push(d);
   save();cerrarFicha();
+  logEvent(esNuevo?'Creó ficha':'Editó ficha',`${fichaCtx.tipo} ${d.codigo||''} v${d.version||''} — ${d.nombre||''}`);
   fichaCtx.tipo==='documento'?renderDocumentos():renderRegistros();
   toast('Ficha guardada');
 }
@@ -2173,6 +2252,7 @@ function accionNuevaVersion(){
       nueva.controlCambios=(actual.controlCambios||[]).slice(); // histórico conservado
       arr.push(nueva);
       save();
+      logEvent('Nueva versión',`${fichaCtx.tipo} ${nueva.codigo||''} v${nueva.version} — ${nueva.nombre||''}`);
 
       // 3) Abre la ficha de la nueva versión para diligenciar el control de cambios
       fichaCtx={tipo:fichaCtx.tipo,id:nueva.id,draft:JSON.parse(JSON.stringify(nueva))};
@@ -2196,8 +2276,10 @@ function eliminarItem(){
   pedirConfirmacion('Eliminar ficha','¿Eliminar definitivamente esta ficha?\n\nPodrás revertirlo con “Deshacer”.',()=>{
     const arr=fichaCtx.tipo==='documento'?db.documentos:db.registros;
     const idx=arr.findIndex(x=>x.id===fichaCtx.draft.id);
+    const ref=idx>=0?arr[idx]:null;
     if(idx>=0)arr.splice(idx,1);
     save();cerrarFicha();
+    logEvent('Eliminó ficha',ref?`${fichaCtx.tipo} ${ref.codigo||''} v${ref.version||''} — ${ref.nombre||''}`:'');
     fichaCtx.tipo==='documento'?renderDocumentos():renderRegistros();
     toast('Ficha eliminada');
   },'Eliminar');
@@ -2261,6 +2343,7 @@ function borrarFichasPrueba(){
     `Se borrarán ${db.documentos.length} documento(s) y ${db.registros.length} formato(s).\nLos datos maestros (procesos, usuarios, perfiles, etc.) se CONSERVAN.\n\nPodrás revertirlo con el botón “Deshacer”.`,
     ()=>{
       db.documentos=[];db.registros=[];save();
+      logEvent('Borró fichas de prueba',`${total} ficha(s)`);
       renderDatos();renderDocumentos();renderRegistros();renderAprobaciones();
       toast(`${total} ficha(s) borrada(s). Datos maestros conservados.`);
     },'Borrar fichas');
@@ -2271,6 +2354,7 @@ function restablecerTodo(){
     ()=>{
       pedirConfirmacion('Confirmar restablecimiento','Confirma una vez más: ¿restablecer TODA la aplicación?',()=>{
         db=seed();save();
+        logEvent('Restableció la aplicación','estado inicial');
         fillListFilters();renderDatos();renderDocumentos();renderRegistros();renderAprobaciones();
         toast('Aplicación restablecida al estado inicial.');
       },'Sí, restablecer todo');
@@ -2453,6 +2537,7 @@ function importJSON(ev){
       const data=JSON.parse(reader.result);
       if(!data.config||!('documentos'in data)){throw new Error('formato');}
       db=data;migrate();save();
+      logEvent('Importó datos (JSON)',`${db.documentos.length} doc, ${db.registros.length} fmt`);
       // Re-aplicar el perfil del usuario autenticado con los datos recién importados
       if(window.FB&&window.FB.auth&&window.FB.auth.currentUser){resolveCurrentUser(window.FB.auth.currentUser.email);refreshAuthUI();}
       toast('Datos importados correctamente');
@@ -2491,6 +2576,7 @@ window.__onAuth = async function(fbUser){
     }
     resolveCurrentUser(fbUser.email);
     refreshAuthUI();
+    logEvent('Sesión iniciada','');
     showApp();
     const tab=document.querySelector('nav.tabs button.active');
     switchTab(tab?tab.dataset.tab:'documentos');
@@ -2503,7 +2589,7 @@ window.__onAuth = async function(fbUser){
 </script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
-  import { getFirestore, collection, getDocs, getDoc, doc, setDoc, deleteDoc, writeBatch, onSnapshot } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+  import { getFirestore, collection, getDocs, getDoc, doc, setDoc, deleteDoc, writeBatch, onSnapshot, addDoc, query, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
   import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, setPersistence, indexedDBLocalPersistence } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
   const firebaseConfig = {
     apiKey: "AIzaSyA1x4ey_y3mSOSAt4d3VRxXZdrMaukIHSs",
@@ -2518,7 +2604,7 @@ window.__onAuth = async function(fbUser){
   const fdb = getFirestore(app);
   const auth = getAuth(app);
   setPersistence(auth, indexedDBLocalPersistence).catch(()=>{}); // mantiene la sesión sin usar localStorage
-  window.FB = { app, fdb, auth, collection, getDocs, getDoc, doc, setDoc, deleteDoc, writeBatch, onSnapshot,
+  window.FB = { app, fdb, auth, collection, getDocs, getDoc, doc, setDoc, deleteDoc, writeBatch, onSnapshot, addDoc, query, orderBy, limit, serverTimestamp,
     signIn:(e,p)=>signInWithEmailAndPassword(auth,e,p),
     signOut:()=>signOut(auth),
     resetPwd:(e)=>sendPasswordResetEmail(auth,e)
