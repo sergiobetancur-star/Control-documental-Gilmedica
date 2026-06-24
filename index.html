@@ -2313,9 +2313,8 @@ function eliminarItem(){
 
 /* ---------- Solicitud por correo ---------- */
 let mailCtx=null;
-function deepLink(tipo,id){
-  const base=location.origin+location.pathname;
-  return `${base}?t=${encodeURIComponent(tipo)}&id=${encodeURIComponent(id)}`;
+function deepLink(){
+  return location.origin+location.pathname+'?goto=aprobaciones';
 }
 function solicitar(fase){
   const d=readFicha();
@@ -2324,7 +2323,7 @@ function solicitar(fase){
              aprobacion:{rol:'aprobación / firma',resp:d.responsableAprobar}};
   const m=map[fase];const u=getUser(m.resp);
   const para = (u&&u.correo)? u.correo : '';
-  const enlace = deepLink(fichaCtx.tipo,d.id);
+  const enlace = deepLink();
   const asunto=`Solicitud de ${m.rol}: ${d.codigo||'(sin código)'} - ${d.nombre||''}`;
   const cuerpo=
 `Estimado(a) ${u?u.nombre:'responsable'},
@@ -2336,7 +2335,7 @@ Se solicita su ${m.rol} del siguiente documento en el Control Documental de Gilm
 • Versión: ${d.version||'1'}
 • Proceso: ${nombreProceso(d.proceso)||'—'}
 
-Ingrese directamente al documento aquí:
+Ingrese a la sección de Aprobaciones para registrar su ${m.rol}:
 ${enlace}
 ${d.link?'\nDocumento original: '+d.link:''}
 
@@ -2618,14 +2617,13 @@ let deepLinkDone=false;
 function abrirDeepLink(){
   if(deepLinkDone)return;
   const p=new URLSearchParams(location.search);
-  const t=p.get('t'),id=p.get('id');
+  const goto=p.get('goto');
+  const legacy=p.get('t')&&p.get('id');   // enlaces antiguos: también van a Aprobaciones
   history.replaceState({},'',location.origin+location.pathname); // limpia la URL
-  if(!t||!id)return;
-  deepLinkDone=true;
-  const arr=t==='documento'?db.documentos:t==='registro'?db.registros:null;
-  if(!arr||!arr.find(x=>x.id===id)){toast('El documento del enlace no se encontró.');return;}
-  switchTab('aprobaciones');
-  abrirFicha(t,id);
+  if(goto==='aprobaciones'||legacy){
+    deepLinkDone=true;
+    switchTab('aprobaciones');
+  }
 }
 window.__onAuth = async function(fbUser){
   if(fbUser){
