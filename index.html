@@ -847,9 +847,12 @@ function resolveCurrentUser(email){
 }
 function puedeFirmar(item,accion){
   if(!currentUser)return false;
-  if(esAdmin())return true;                         // admin puede firmar / dar soporte
   if(currentUser.__guest)return false;              // correo no registrado en Datos maestros
   const respId=accion==='elaborado'?item.responsableElaborar:accion==='revisado'?item.responsableRevisar:item.responsableAprobar;
+  if(esAdmin()){
+    // El administrador SOLO puede firmar los pasos donde está asignado como responsable
+    return !!respId && currentUser.id===respId;
+  }
   if(!respId)return true;                            // sin responsable asignado: cualquiera autenticado
   return currentUser.id===respId;                   // solo el responsable asignado
 }
@@ -1579,7 +1582,11 @@ function flujo(tipo,id,accion){
   if(!puedeFirmar(item,accion)){
     const respId=accion==='elaborado'?item.responsableElaborar:accion==='revisado'?item.responsableRevisar:item.responsableAprobar;
     const r=getUser(respId);
-    toast(currentUser&&currentUser.__guest?'Tu correo no está registrado en Datos maestros. Pide al administrador que lo registre.':(r?`Este paso está asignado a ${r.nombre}. Inicia sesión como esa persona para firmar.`:'No tienes permiso para firmar este paso.'));
+    let msg;
+    if(currentUser&&currentUser.__guest)msg='Tu correo no está registrado en Datos maestros. Pide al administrador que lo registre.';
+    else if(r)msg=`Este paso está asignado a ${r.nombre}. Solo esa persona puede firmarlo.`;
+    else msg='Este paso no tiene un responsable asignado. Asigna el responsable en la ficha para poder firmarlo.';
+    toast(msg);
     return;
   }
   const rolTxt = accion==='elaborado'?'elaboración':accion==='revisado'?'revisión':'aprobación';
