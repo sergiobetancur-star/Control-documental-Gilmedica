@@ -2453,8 +2453,11 @@ function importJSON(ev){
       const data=JSON.parse(reader.result);
       if(!data.config||!('documentos'in data)){throw new Error('formato');}
       db=data;migrate();save();
+      // Re-aplicar el perfil del usuario autenticado con los datos recién importados
+      if(window.FB&&window.FB.auth&&window.FB.auth.currentUser){resolveCurrentUser(window.FB.auth.currentUser.email);refreshAuthUI();}
       toast('Datos importados correctamente');
-      switchTab(document.querySelector('nav.tabs button.active').dataset.tab);
+      const tabActual=document.querySelector('nav.tabs button.active');
+      switchTab(tabActual?tabActual.dataset.tab:'documentos');
       fillListFilters();
     }catch(e){toast('Archivo JSON no válido');}
     ev.target.value='';
