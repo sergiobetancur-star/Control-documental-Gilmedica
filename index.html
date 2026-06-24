@@ -223,6 +223,7 @@
   .req-flag{color:var(--danger)}
   .legend-states{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--muted);align-items:center}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 </head>
 <body>
 
@@ -325,6 +326,9 @@
         <h1>Aprobaciones</h1>
         <p>Documentos y formatos pendientes (todo lo que no está vigente).</p>
       </div>
+      <label style="display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:var(--brand);cursor:pointer">
+        <input type="checkbox" id="apprSoloMias" onchange="renderAprobaciones()"> Solo mis pendientes
+      </label>
     </div>
     <div class="note">Cada documento muestra la acción disponible según su estado actual: elaborar → revisar → aprobar. También puede rechazar para devolverlo al paso anterior.</div>
     <div class="card">
@@ -493,10 +497,11 @@
     </div>
     <div class="ficha-body" id="mailBody"></div>
     <div class="ficha-foot">
-      <span style="color:var(--muted);font-size:12px;align-self:center">Envío local: abre tu cliente de correo.</span>
+      <span style="color:var(--muted);font-size:12px;align-self:center">Envío automático con EmailJS o local con tu cliente de correo.</span>
       <div style="display:flex;gap:8px">
         <button class="btn" onclick="closeOverlay('overlayMail')">Cerrar</button>
-        <a id="mailtoLink" class="btn primary" href="#">Abrir en correo</a>
+        <a id="mailtoLink" class="btn" href="#">Abrir en correo</a>
+        <button id="emailSendBtn" class="btn primary" onclick="enviarCorreoEmailJS()">✉ Enviar ahora</button>
       </div>
     </div>
   </div>
@@ -575,6 +580,18 @@ const PERMISOS = ['Ver','Crear','Editar','Elaborar','Revisar','Aprobar','Configu
 
 /* ---------- Estado de la base ---------- */
 let db = null;
+
+/* ============================================================
+   CONFIGURACIÓN DE CORREO (EmailJS)
+   Rellena estos 3 valores con los de tu cuenta de EmailJS para
+   habilitar el envío automático. Mientras estén vacíos, se usa el
+   envío local (botón "Abrir en correo").
+   ============================================================ */
+window.EMAILJS = {
+  publicKey: "y1rUPaDS2aoc_a3Vp",   // EmailJS · Account · Public Key
+  serviceId: "service_2i4dsn9",     // EmailJS · Email Services · Service ID
+  templateId: "template_jrmm25s"    // EmailJS · Email Templates · Template ID
+};
 
 function seed(){
   return {
@@ -1504,14 +1521,23 @@ function renderRegistros(){renderLista('registro');}
 /* ============================================================
    APROBACIONES
    ============================================================ */
+function respDelPaso(d){return d.estado==='elaboracion'?d.responsableElaborar:d.estado==='revision'?d.responsableRevisar:d.estado==='aprobacion'?d.responsableAprobar:'';}
 function renderAprobaciones(){
   const tbody=document.getElementById('tbodyAppr');
-  const items=[
+  const chk=document.getElementById('apprSoloMias');
+  const admin=esAdmin();
+  // Los administradores ven todo; los demás solo lo suyo (toggle forzado)
+  if(chk){chk.disabled=!admin; if(!admin)chk.checked=true;}
+  const soloMias = chk ? chk.checked : !admin;
+  let items=[
     ...db.documentos.map(d=>({...d,_tipo:'documento'})),
     ...db.registros.map(d=>({...d,_tipo:'registro'})),
   ].filter(d=>d.estado!=='vigente'&&d.estado!=='publicado'&&d.estado!=='obsoleto');
+  if(soloMias && currentUser){
+    items=items.filter(d=>respDelPaso(d)===currentUser.id);
+  }
   if(!items.length){
-    tbody.innerHTML=`<tr><td colspan="7"><div class="empty"><div class="big">Nada pendiente</div>Todos los documentos están vigentes.</div></td></tr>`;
+    tbody.innerHTML=`<tr><td colspan="7"><div class="empty"><div class="big">Nada pendiente</div>${soloMias?'No tienes documentos pendientes de tu firma.':'Todos los documentos están vigentes.'}</div></td></tr>`;
     return;
   }
   tbody.innerHTML=items.map(d=>`
@@ -2286,6 +2312,11 @@ function eliminarItem(){
 }
 
 /* ---------- Solicitud por correo ---------- */
+let mailCtx=null;
+function deepLink(tipo,id){
+  const base=location.origin+location.pathname;
+  return `${base}?t=${encodeURIComponent(tipo)}&id=${encodeURIComponent(id)}`;
+}
 function solicitar(fase){
   const d=readFicha();
   const map={elaboracion:{rol:'elaboración',resp:d.responsableElaborar},
@@ -2293,6 +2324,7 @@ function solicitar(fase){
              aprobacion:{rol:'aprobación / firma',resp:d.responsableAprobar}};
   const m=map[fase];const u=getUser(m.resp);
   const para = (u&&u.correo)? u.correo : '';
+  const enlace = deepLink(fichaCtx.tipo,d.id);
   const asunto=`Solicitud de ${m.rol}: ${d.codigo||'(sin código)'} - ${d.nombre||''}`;
   const cuerpo=
 `Estimado(a) ${u?u.nombre:'responsable'},
@@ -2304,19 +2336,42 @@ Se solicita su ${m.rol} del siguiente documento en el Control Documental de Gilm
 • Versión: ${d.version||'1'}
 • Proceso: ${nombreProceso(d.proceso)||'—'}
 
-Por favor ingrese al sistema para registrar su ${m.rol}.
+Ingrese directamente al documento aquí:
+${enlace}
 ${d.link?'\nDocumento original: '+d.link:''}
 
 Gracias,
-Sistema de Gestión de Calidad`;
+Sistema de Gestión de Calidad · Gilmedica S.A.S.`;
+  mailCtx={para,asunto,cuerpo,enlace,nombreResp:u?u.nombre:'responsable',rol:m.rol,d:{codigo:d.codigo,nombre:d.nombre,version:d.version},tipo:fichaCtx.tipo,id:d.id};
   document.getElementById('mailBody').innerHTML=`
     <div class="field"><label>Para</label><input value="${esc(para)}" readonly style="width:100%;padding:8px 11px;border:1px solid var(--border-strong);border-radius:8px"></div>
     <div class="field" style="margin-top:10px"><label>Asunto</label><input value="${esc(asunto)}" readonly style="width:100%;padding:8px 11px;border:1px solid var(--border-strong);border-radius:8px"></div>
-    <div class="field" style="margin-top:10px"><label>Mensaje</label><textarea readonly style="width:100%;min-height:160px;padding:8px 11px;border:1px solid var(--border-strong);border-radius:8px">${esc(cuerpo)}</textarea></div>
+    <div class="field" style="margin-top:10px"><label>Mensaje</label><textarea readonly style="width:100%;min-height:170px;padding:8px 11px;border:1px solid var(--border-strong);border-radius:8px">${esc(cuerpo)}</textarea></div>
     ${!para?'<div class="note" style="margin-top:12px;color:var(--danger);border-color:#e7b6b2;background:var(--danger-bg)">No hay correo para el responsable. Agrega su correo en el módulo Datos › Usuarios.</div>':''}`;
   const link=document.getElementById('mailtoLink');
   link.href=`mailto:${encodeURIComponent(para)}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
+  // Mostrar/ocultar el botón de envío automático según configuración y destinatario
+  const sendBtn=document.getElementById('emailSendBtn');
+  if(sendBtn)sendBtn.style.display=(emailjsConfigurado()&&para)?'':'none';
   document.getElementById('overlayMail').classList.add('open');
+}
+function emailjsConfigurado(){const E=window.EMAILJS;return !!(E&&E.publicKey&&E.serviceId&&E.templateId&&window.emailjs);}
+function enviarCorreoEmailJS(){
+  if(!mailCtx)return;
+  if(!mailCtx.para){toast('No hay correo del responsable');return;}
+  if(!emailjsConfigurado()){toast('EmailJS no está configurado. Usa «Abrir en correo» por ahora.');return;}
+  const btn=document.getElementById('emailSendBtn');if(btn){btn.disabled=true;btn.textContent='Enviando…';}
+  const params={to_email:mailCtx.para,to_name:mailCtx.nombreResp,subject:mailCtx.asunto,message:mailCtx.cuerpo,
+    enlace:mailCtx.enlace,codigo:mailCtx.d.codigo||'',nombre:mailCtx.d.nombre||'',version:mailCtx.d.version||'',rol:mailCtx.rol,
+    from_name:currentUser?currentUser.nombre:'Control Documental'};
+  window.emailjs.send(window.EMAILJS.serviceId,window.EMAILJS.templateId,params)
+    .then(()=>{
+      toast('Correo enviado a '+mailCtx.para);
+      logEvent('Envió solicitud por correo',`${mailCtx.rol} · ${mailCtx.tipo} ${mailCtx.d.codigo||''} → ${mailCtx.para}`);
+      closeOverlay('overlayMail');
+    })
+    .catch(e=>{console.error('emailjs',e);toast('No se pudo enviar el correo. Revisa la configuración de EmailJS.');})
+    .finally(()=>{if(btn){btn.disabled=false;btn.textContent='✉ Enviar ahora';}});
 }
 
 /* ============================================================
@@ -2558,6 +2613,20 @@ function importJSON(ev){
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeOverlay('overlayFicha');closeOverlay('overlayMail');closeOverlay('overlayFecha');closeOverlay('overlayConfirm');closeOverlay('overlayGD');}});
 
 /* ---------- init: el arranque depende del estado de autenticación ---------- */
+(function initEmailJS(){try{if(window.emailjs&&window.EMAILJS&&EMAILJS.publicKey)window.emailjs.init({publicKey:EMAILJS.publicKey});}catch(e){}})();
+let deepLinkDone=false;
+function abrirDeepLink(){
+  if(deepLinkDone)return;
+  const p=new URLSearchParams(location.search);
+  const t=p.get('t'),id=p.get('id');
+  history.replaceState({},'',location.origin+location.pathname); // limpia la URL
+  if(!t||!id)return;
+  deepLinkDone=true;
+  const arr=t==='documento'?db.documentos:t==='registro'?db.registros:null;
+  if(!arr||!arr.find(x=>x.id===id)){toast('El documento del enlace no se encontró.');return;}
+  switchTab('aprobaciones');
+  abrirFicha(t,id);
+}
 window.__onAuth = async function(fbUser){
   if(fbUser){
     if(!appLoaded){
@@ -2580,6 +2649,7 @@ window.__onAuth = async function(fbUser){
     showApp();
     const tab=document.querySelector('nav.tabs button.active');
     switchTab(tab?tab.dataset.tab:'documentos');
+    abrirDeepLink();
   }else{
     currentUser=null;
     refreshAuthUI();
