@@ -1,0 +1,2398 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control Documental · Gilmedica S.A.S.</title>
+<style>
+  :root{
+    --brand:#13335c;            /* navy chrome */
+    --brand-600:#1f4f86;
+    --brand-50:#eef3f9;
+    --bg:#f4f6f9;
+    --surface:#ffffff;
+    --border:#dde3ec;
+    --border-strong:#c4cdda;
+    --text:#1b2533;
+    --muted:#647082;
+    --muted-2:#8a94a3;
+    --danger:#b3261e;
+    --danger-bg:#fdeceb;
+    --ok:#0a7d4d;
+    --radius:10px;
+    --shadow:0 1px 2px rgba(19,51,92,.06), 0 8px 24px rgba(19,51,92,.08);
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.45}
+  button{font-family:inherit;font-size:inherit;cursor:pointer}
+  input,select,textarea{font-family:inherit;font-size:14px}
+
+  /* ---------- Top bar ---------- */
+  header.topbar{
+    background:var(--brand);color:#fff;padding:0 20px;display:flex;align-items:center;
+    gap:18px;height:58px;position:sticky;top:0;z-index:40;box-shadow:0 2px 10px rgba(0,0,0,.12)
+  }
+  .logo{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.3px}
+  .logo .mark{
+    width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,#3a86c8,#7fd1c0);
+    display:grid;place-items:center;font-weight:800;color:#0c2440;font-size:15px
+  }
+  .logo small{display:block;font-weight:400;font-size:11px;opacity:.7;letter-spacing:.5px}
+  .topbar .spacer{flex:1}
+  .topbar .tool{
+    background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);color:#fff;
+    padding:7px 12px;border-radius:8px;display:inline-flex;align-items:center;gap:6px;font-size:13px
+  }
+  .topbar .tool:hover{background:rgba(255,255,255,.22)}
+  .topbar .tool:disabled{opacity:.4;cursor:not-allowed}
+  .topbar .tool:disabled:hover{background:rgba(255,255,255,.12)}
+
+  /* ---------- Tabs ---------- */
+  nav.tabs{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;display:flex;gap:2px;position:sticky;top:58px;z-index:30}
+  nav.tabs button{
+    background:none;border:none;padding:14px 16px;color:var(--muted);font-weight:600;font-size:13.5px;
+    border-bottom:3px solid transparent;margin-bottom:-1px
+  }
+  nav.tabs button:hover{color:var(--text)}
+  nav.tabs button.active{color:var(--brand);border-bottom-color:var(--brand-600)}
+
+  /* ---------- Layout ---------- */
+  main{max-width:1180px;margin:0 auto;padding:24px 20px 80px}
+  .view{display:none}
+  .view.active{display:block;animation:fade .2s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+  .module-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;gap:12px;flex-wrap:wrap}
+  .module-head h1{font-size:20px;margin:0;font-weight:700;letter-spacing:-.2px}
+  .module-head p{margin:2px 0 0;color:var(--muted);font-size:13px}
+  .head-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+  .btn{
+    border:1px solid var(--border-strong);background:var(--surface);color:var(--text);
+    padding:8px 14px;border-radius:8px;font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:7px
+  }
+  .btn:hover{border-color:var(--brand-600);color:var(--brand)}
+  .btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+  .btn.primary:hover{background:var(--brand-600)}
+  .btn.ghost{border-color:transparent;background:var(--brand-50);color:var(--brand)}
+  .btn.danger{border-color:#e7b6b2;color:var(--danger);background:#fff}
+  .btn.danger:hover{background:var(--danger-bg)}
+  .btn.sm{padding:5px 10px;font-size:12px}
+  .btn.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+  .btn.ok:hover{background:#0a6b42;border-color:#0a6b42;color:#fff}
+
+  /* ---------- Tables ---------- */
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+  .toolbar{display:flex;gap:10px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+  .toolbar input[type=search]{flex:1;min-width:180px;padding:8px 12px;border:1px solid var(--border-strong);border-radius:8px}
+  table{width:100%;border-collapse:collapse}
+  th{text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted-2);padding:11px 14px;border-bottom:1px solid var(--border);font-weight:700;background:#fafbfd}
+  td{padding:12px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:#f8fafc}
+  .group-row td{background:var(--brand-50);border-bottom:1px solid var(--border-strong);padding:9px 14px;font-weight:600;font-size:13px}
+  .group-row:hover td{background:var(--brand-50)}
+  .group-row .codecell{font-size:13px}
+  .grp-count{margin-left:8px;font-weight:600;font-size:11px;color:var(--brand);background:#fff;border:1px solid #cdd9ea;border-radius:20px;padding:2px 9px}
+  .ver-row td:first-child{padding-left:22px;color:var(--muted-2)}
+  .subtabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+  .subtabs button{background:#eef3f9;border:1px solid var(--border);color:var(--muted);padding:8px 14px;border-radius:8px;font-weight:600;font-size:13px}
+  .subtabs button:hover{color:var(--text)}
+  .subtabs button.active{background:var(--brand);border-color:var(--brand);color:#fff}
+  .disp-tags{display:flex;gap:4px}
+  .disp-tag{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:5px;font-size:10px;font-weight:700;background:#f1f3f6;color:#b6bdc8;border:1px solid #e2e6ec}
+  .disp-tag.on{background:var(--brand-50);color:var(--brand);border-color:#cdd9ea}
+  .gd-disp{display:flex;gap:14px;flex-wrap:wrap}
+  .gd-disp label{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;color:var(--text)}
+  .trd-section{margin-bottom:18px}
+  .trd-head{background:var(--brand);color:#fff;border-radius:10px 10px 0 0;padding:10px 14px;font-size:12.5px;line-height:1.6}
+  .trd-head .trd-lbl{font-weight:700;letter-spacing:.3px;opacity:.85;margin-right:6px}
+  .trd-section .card{border-radius:0 0 10px 10px;border-top:none}
+  .gd-index{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:16px;box-shadow:var(--shadow);display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .gd-index-lbl{font-weight:700;font-size:12.5px;color:var(--muted);margin-right:2px}
+  .gd-index-chip{background:var(--brand-50);border:1px solid #cdd9ea;color:var(--brand);border-radius:20px;padding:5px 12px;font-size:12.5px;font-weight:600;cursor:pointer}
+  .gd-index-chip:hover{background:var(--brand);color:#fff;border-color:var(--brand)}
+  .gd-select{padding:7px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-weight:600;color:var(--brand);background:#fff;min-width:260px;cursor:pointer}
+  #syncState{font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:14px;margin-right:6px;white-space:nowrap}
+  #syncState.sync-ok{background:#e6f4ea;color:#1e7e34}
+  #syncState.sync-pend{background:#fef7e0;color:#9a6a00}
+  #syncState.sync-err{background:#fde8e8;color:#b42318}
+  .codecell{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;font-weight:600;color:var(--brand)}
+  .row-link{cursor:pointer}
+  .empty{padding:48px 20px;text-align:center;color:var(--muted)}
+  .empty .big{font-size:15px;font-weight:600;color:var(--text);margin-bottom:4px}
+
+  /* ---------- Badges (estados) ---------- */
+  .badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:700;white-space:nowrap;border:1px solid transparent}
+  .badge::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+  .badge-gris{background:#f1f3f6;color:#5b6573;border-color:#e2e6ec}
+  .badge-amarillo{background:#fff6e0;color:#9a6700;border-color:#f4e3b3}
+  .badge-azul{background:#e7f0ff;color:#1d4ed8;border-color:#cdddfb}
+  .badge-verde{background:#e3f6ec;color:#0a7d4d;border-color:#c2ead4}
+  .badge-rojo{background:#fdeceb;color:#b3261e;border-color:#f4cfcc}
+  .pub-yes{color:#0a7d4d;font-weight:700}
+  .pub-no{color:var(--muted-2)}
+
+  /* ---------- Datos module ---------- */
+  .grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+  @media(max-width:840px){.grid2{grid-template-columns:1fr}}
+  .dcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .dcard h3{margin:0;padding:13px 15px;border-bottom:1px solid var(--border);font-size:14px;font-weight:700}
+  .dcard h3 .hint{font-weight:400;color:var(--muted);font-size:12px;margin-left:6px}
+  .dcard .body{padding:13px 15px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+  .chip{display:inline-flex;align-items:center;gap:8px;background:var(--brand-50);border:1px solid #d7e2f0;border-radius:20px;padding:5px 6px 5px 12px;font-size:13px}
+  .chip button{border:none;background:#d7e2f0;color:var(--brand);width:18px;height:18px;border-radius:50%;line-height:1;font-size:12px;display:grid;place-items:center}
+  .chip button:hover{background:#b3261e;color:#fff}
+  .chip button.ed{background:#cdd9ea;color:var(--brand)}
+  .chip button.ed:hover{background:var(--brand-600);color:#fff}
+  .chip button.ok{background:var(--ok);color:#fff}
+  .chip button.ok:hover{background:#0a7d4d;color:#fff}
+  .chip input.edit-inp{border:1px solid var(--border-strong);border-radius:6px;padding:3px 7px;font-size:13px;width:150px}
+  .addrow{display:flex;gap:8px}
+  .addrow input,.addrow select{flex:1;padding:8px 10px;border:1px solid var(--border-strong);border-radius:8px}
+  .subline{font-size:12px;color:var(--muted);margin:10px 0 4px}
+
+  /* ---------- Modal / Ficha ---------- */
+  .overlay{position:fixed;inset:0;background:rgba(15,28,46,.45);display:none;z-index:50;align-items:flex-start;justify-content:center;overflow:auto;padding:30px 16px}
+  .overlay.open{display:flex}
+  .ficha{background:var(--surface);width:100%;max-width:920px;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden;animation:pop .18s ease}
+  @keyframes pop{from{transform:translateY(10px);opacity:0}to{transform:none;opacity:1}}
+  .ficha-head{padding:16px 22px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:16px;background:linear-gradient(180deg,#fbfcfe,#fff)}
+  .ficha-head h2{margin:0;font-size:17px}
+  .ficha-head .sub{color:var(--muted);font-size:12.5px;margin-top:3px}
+  .iconbtn{border:none;background:#eef1f5;width:34px;height:34px;border-radius:8px;font-size:18px;color:var(--muted);line-height:1}
+  .iconbtn:hover{background:#e0e5ec;color:var(--text)}
+  .ficha-body{padding:20px 22px;max-height:64vh;overflow:auto}
+  .ficha-foot{padding:14px 22px;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#fafbfd}
+
+  fieldset.section{border:1px solid var(--border);border-radius:10px;padding:14px 16px 4px;margin:0 0 18px}
+  fieldset.section legend{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--brand);font-weight:700;padding:0 6px}
+  .fgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:12px}
+  .fgrid.three{grid-template-columns:repeat(3,1fr)}
+  @media(max-width:680px){.fgrid,.fgrid.three{grid-template-columns:1fr}}
+  .field label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px}
+  .field input,.field select,.field textarea{width:100%;padding:8px 11px;border:1px solid var(--border-strong);border-radius:8px;background:#fff}
+  .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--brand-600);box-shadow:0 0 0 3px rgba(31,79,134,.12)}
+  .field textarea{min-height:60px;resize:vertical}
+  .link-row{display:flex;gap:6px}
+  .link-row input{flex:1}
+  .link-row .open-btn{border:1px solid var(--border-strong);background:var(--brand-50);color:var(--brand);border-radius:8px;padding:0 12px;font-weight:600;font-size:12.5px;white-space:nowrap}
+  .link-row .open-btn:hover{background:var(--brand);color:#fff;border-color:var(--brand)}
+  .link-row .open-btn:disabled{opacity:.45;cursor:not-allowed;background:#f1f3f6;color:var(--muted-2)}
+
+  .signbox{border:1px dashed var(--border-strong);border-radius:8px;padding:10px 12px;background:#fbfcfe}
+  .signbox .who{font-weight:700}
+  .signbox .meta{font-size:12px;color:var(--muted);margin-top:3px}
+  .signbox .none{color:var(--muted-2);font-style:italic}
+
+  .changelog{list-style:none;margin:0;padding:0}
+  .changelog li{display:flex;gap:12px;padding:8px 0;border-bottom:1px dashed var(--border)}
+  .changelog li:last-child{border-bottom:none}
+  .changelog .v{font-weight:700;color:var(--brand);min-width:46px;font-family:ui-monospace,monospace;font-size:12.5px}
+  .changelog .d{flex:1}
+  .changelog .dt{color:var(--muted-2);font-size:12px}
+
+  .pill-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+  /* approvals */
+  .appr-actions{display:flex;gap:6px;flex-wrap:wrap}
+  .note{background:var(--brand-50);border:1px solid #d7e2f0;border-radius:8px;padding:10px 12px;font-size:12.5px;color:var(--brand-600);margin-bottom:16px}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--text);color:#fff;padding:12px 18px;border-radius:10px;font-size:13.5px;box-shadow:0 10px 30px rgba(0,0,0,.3);z-index:80;opacity:0;pointer-events:none;transition:.25s}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px)}
+  .hidden{display:none!important}
+  .req-flag{color:var(--danger)}
+  .legend-states{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--muted);align-items:center}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="logo">
+    <span class="mark">G</span>
+    <span>Gilmedica S.A.S.<small>Control documental · SGC ISO 9001</small></span>
+  </div>
+  <div class="spacer"></div>
+  <span id="syncState" class="sync-pend" title="Estado de sincronización con la nube">Conectando…</span>
+  <button class="tool" id="undoBtn" onclick="undo()" title="Deshacer la última acción" disabled>↶ Deshacer</button>
+  <button class="tool" id="redoBtn" onclick="redo()" title="Rehacer la acción deshecha" disabled>↷ Rehacer</button>
+  <button class="tool" onclick="exportJSON()" title="Descargar respaldo .json">⬇ Exportar</button>
+  <button class="tool" onclick="document.getElementById('importInput').click()" title="Cargar respaldo .json">⬆ Importar</button>
+  <input id="importInput" type="file" accept="application/json" class="hidden" onchange="importJSON(event)">
+</header>
+
+<nav class="tabs">
+  <button data-tab="documentos" class="active" onclick="switchTab('documentos')">Listado maestro de documentos</button>
+  <button data-tab="registros" onclick="switchTab('registros')">Listado maestro de registros</button>
+  <button data-tab="aprobaciones" onclick="switchTab('aprobaciones')">Aprobaciones</button>
+  <button data-tab="gestion" onclick="switchTab('gestion')">Gestión documental</button>
+  <button data-tab="datos" onclick="switchTab('datos')">Datos maestros</button>
+</nav>
+
+<main>
+  <!-- ====== DOCUMENTOS ====== -->
+  <section id="view-documentos" class="view active">
+    <div class="module-head">
+      <div>
+        <h1>Listado maestro de documentos</h1>
+        <p>Documentos controlados del Sistema de Gestión de Calidad.</p>
+      </div>
+      <div class="head-actions">
+        <button class="btn" onclick="exportarListaExcel('documento')" title="Exportar el listado con el contenido de cada ficha">⤓ Exportar a Excel</button>
+        <button class="btn ok" onclick="abrirFicha('documento',null)">＋ Nuevo documento</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="toolbar">
+        <input type="search" id="searchDoc" placeholder="Buscar por código o nombre…" oninput="renderDocumentos()">
+        <select id="filterDocEstado" onchange="renderDocumentos()"><option value="">Todos los estados</option></select>
+        <select id="filterDocProceso" onchange="renderDocumentos()"><option value="">Todos los procesos</option></select>
+        <select id="filterDocSubproceso" onchange="renderDocumentos()"><option value="">Todos los subprocesos</option></select>
+      </div>
+      <table>
+        <thead><tr><th>Código</th><th>Nombre del documento</th><th>Versión</th><th>Estado</th><th>Publicado</th><th style="text-align:right">Original</th></tr></thead>
+        <tbody id="tbodyDoc"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ====== REGISTROS ====== -->
+  <section id="view-registros" class="view">
+    <div class="module-head">
+      <div>
+        <h1>Listado maestro de registros</h1>
+        <p>Formatos y registros del SGC, con control de retención y disposición final.</p>
+      </div>
+      <div class="head-actions">
+        <button class="btn" onclick="exportarListaExcel('registro')" title="Exportar el listado con el contenido de cada ficha">⤓ Exportar a Excel</button>
+        <button class="btn ok" onclick="abrirFicha('registro',null)">＋ Nuevo formato</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="toolbar">
+        <input type="search" id="searchReg" placeholder="Buscar por código o nombre…" oninput="renderRegistros()">
+        <select id="filterRegEstado" onchange="renderRegistros()"><option value="">Todos los estados</option></select>
+        <select id="filterRegProceso" onchange="renderRegistros()"><option value="">Todos los procesos</option></select>
+        <select id="filterRegSubproceso" onchange="renderRegistros()"><option value="">Todos los subprocesos</option></select>
+      </div>
+      <table>
+        <thead><tr><th>Código</th><th>Nombre del formato</th><th>Versión</th><th>Estado</th><th>Publicado</th><th style="text-align:right">Original</th></tr></thead>
+        <tbody id="tbodyReg"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ====== APROBACIONES ====== -->
+  <section id="view-aprobaciones" class="view">
+    <div class="module-head">
+      <div>
+        <h1>Aprobaciones</h1>
+        <p>Documentos y formatos pendientes (todo lo que no está vigente).</p>
+      </div>
+    </div>
+    <div class="note">Cada documento muestra la acción disponible según su estado actual: elaborar → revisar → aprobar. También puede rechazar para devolverlo al paso anterior.</div>
+    <div class="card">
+      <table>
+        <thead><tr><th>Código</th><th>Nombre</th><th>Versión</th><th>Tipo</th><th>Proceso</th><th>Estado</th><th style="text-align:right">Acción</th></tr></thead>
+        <tbody id="tbodyAppr"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ====== GESTIÓN DOCUMENTAL (Res. 8934/2014 SIC) ====== -->
+  <section id="view-gestion" class="view">
+    <div class="module-head">
+      <div>
+        <h1>Gestión documental</h1>
+        <p>Instrumentos archivísticos · Resolución 8934 de 2014 (SIC) · Ley 594 de 2000.</p>
+      </div>
+      <div class="head-actions">
+        <button class="btn" onclick="gdExportExcel()" title="Exportar el instrumento activo a hoja de cálculo">⤓ Exportar a Excel</button>
+      </div>
+    </div>
+
+    <div class="dcard" style="margin-bottom:16px">
+      <h3>Dependencias / Unidades administrativas <span class="hint">oficinas productoras</span></h3>
+      <div class="body" id="gdDependencias"></div>
+    </div>
+
+    <div class="subtabs" id="gdSubtabs">
+      <button data-gd="ccd" class="active" onclick="gdTab('ccd')">Cuadro de Clasificación</button>
+      <button data-gd="trd" onclick="gdTab('trd')">Tabla de Retención</button>
+      <button data-gd="tvd" onclick="gdTab('tvd')">Tabla de Valoración</button>
+    </div>
+    <div id="gdContent"></div>
+  </section>
+
+  <!-- ====== DATOS ====== -->
+  <section id="view-datos" class="view">
+    <div class="module-head">
+      <div>
+        <h1>Datos maestros</h1>
+        <p>Listas base que alimentan las fichas de documentos y registros.</p>
+      </div>
+    </div>
+    <div class="grid2">
+      <!-- Procesos -->
+      <div class="dcard">
+        <h3>Procesos</h3>
+        <div class="body"><div class="chips" id="chips-procesos"></div>
+          <div class="addrow"><input id="add-procesos" placeholder="Ej. Gestión de Calidad, Comercial…"><button class="btn primary sm" onclick="addSimple('procesos')">Agregar</button></div></div>
+      </div>
+      <!-- Subprocesos -->
+      <div class="dcard">
+        <h3>Subprocesos</h3>
+        <div class="body"><div class="chips" id="chips-subprocesos"></div>
+          <div class="addrow"><input id="add-subprocesos" placeholder="Ej. Control documental, Ventas…"><button class="btn primary sm" onclick="addSimple('subprocesos')">Agregar</button></div></div>
+      </div>
+      <!-- Tipos de documento -->
+      <div class="dcard">
+        <h3>Tipos de documento</h3>
+        <div class="body"><div class="chips" id="chips-tiposDocumento"></div>
+          <div class="addrow"><input id="add-tiposDocumento" placeholder="Ej. Procedimiento, Manual…"><button class="btn primary sm" onclick="addSimple('tiposDocumento')">Agregar</button></div></div>
+      </div>
+      <!-- Origen -->
+      <div class="dcard">
+        <h3>Origen de documentos</h3>
+        <div class="body"><div class="chips" id="chips-origenes"></div>
+          <div class="addrow"><input id="add-origenes" placeholder="Ej. Interno, Externo, Legal…"><button class="btn primary sm" onclick="addSimple('origenes')">Agregar</button></div></div>
+      </div>
+      <!-- Estados -->
+      <div class="dcard">
+        <h3>Estados de documento <span class="hint">colores del flujo</span></h3>
+        <div class="body" id="datosEstados"></div>
+      </div>
+      <!-- Usuarios -->
+      <div class="dcard">
+        <h3>Usuarios</h3>
+        <div class="body" id="datosUsuarios"></div>
+      </div>
+      <!-- Perfiles -->
+      <div class="dcard">
+        <h3>Tipos de usuario <span class="hint">perfiles y permisos</span></h3>
+        <div class="body" id="datosPerfiles"></div>
+      </div>
+      <!-- Clasificacion -->
+      <div class="dcard">
+        <h3>Clasificación de documentos</h3>
+        <div class="body"><div class="chips" id="chips-clasificaciones"></div>
+          <div class="addrow"><input id="add-clasificaciones" placeholder="Ej. Público, Confidencial…"><button class="btn primary sm" onclick="addSimple('clasificaciones')">Agregar</button></div></div>
+      </div>
+      <!-- Recuperacion -->
+      <div class="dcard">
+        <h3>Recuperación de documentos</h3>
+        <div class="body"><div class="chips" id="chips-recuperaciones"></div>
+          <div class="addrow"><input id="add-recuperaciones" placeholder="Ej. Cronológica, Alfabética…"><button class="btn primary sm" onclick="addSimple('recuperaciones')">Agregar</button></div></div>
+      </div>
+      <!-- Disposicion -->
+      <div class="dcard">
+        <h3>Tipos de disposición final</h3>
+        <div class="body"><div class="chips" id="chips-disposiciones"></div>
+          <div class="addrow"><input id="add-disposiciones" placeholder="Ej. Destrucción, Archivo muerto…"><button class="btn primary sm" onclick="addSimple('disposiciones')">Agregar</button></div></div>
+      </div>
+    </div>
+
+    <div class="dcard" style="margin-top:16px;border-color:#e7b6b2">
+      <h3 style="color:var(--danger)">Mantenimiento de datos de prueba</h3>
+      <div class="body">
+        <p style="margin:0 0 12px;color:var(--muted);font-size:13px">Borra las fichas creadas durante las pruebas. <strong>Los datos maestros de este módulo se conservan</strong> (procesos, subprocesos, tipos, usuarios, perfiles, clasificaciones, etc.). Esta acción no se puede deshacer; exporta un respaldo antes si lo necesitas.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" onclick="exportJSON()">⬇ Exportar respaldo</button>
+          <button class="btn danger" onclick="borrarFichasPrueba()">🗑 Borrar fichas de prueba (conservar datos maestros)</button>
+          <button class="btn danger" onclick="restablecerTodo()">⚠ Restablecer todo (incluye datos maestros)</button>
+        </div>
+        <div id="mantStats" class="subline" style="margin-top:10px"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ====== FICHA (modal) ====== -->
+<div class="overlay" id="overlayFicha">
+  <div class="ficha">
+    <div class="ficha-head">
+      <div>
+        <h2 id="fichaTitle">Ficha</h2>
+        <div class="sub" id="fichaSub"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <span id="fichaEstado"></span>
+        <button class="iconbtn" onclick="cerrarFicha()">✕</button>
+      </div>
+    </div>
+    <div class="ficha-body" id="fichaBody"></div>
+    <div class="ficha-foot">
+      <div class="pill-actions" id="fichaActions"></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="exportarFichaPDF()" title="Exportar la ficha a PDF">⤓ Exportar PDF</button>
+        <button class="btn" onclick="cerrarFicha()">Cancelar</button>
+        <button class="btn primary" onclick="guardarFicha()">Guardar ficha</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== EMAIL preview (modal) ====== -->
+<div class="overlay" id="overlayMail">
+  <div class="ficha" style="max-width:560px">
+    <div class="ficha-head">
+      <div><h2>Solicitud por correo</h2><div class="sub">Vista previa del mensaje a enviar al responsable.</div></div>
+      <button class="iconbtn" onclick="closeOverlay('overlayMail')">✕</button>
+    </div>
+    <div class="ficha-body" id="mailBody"></div>
+    <div class="ficha-foot">
+      <span style="color:var(--muted);font-size:12px;align-self:center">Envío local: abre tu cliente de correo.</span>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="closeOverlay('overlayMail')">Cerrar</button>
+        <a id="mailtoLink" class="btn primary" href="#">Abrir en correo</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ====== FECHA/HORA manual (modal) ====== -->
+<div class="overlay" id="overlayFecha">
+  <div class="ficha" style="max-width:420px">
+    <div class="ficha-head">
+      <div><h2 id="fechaTitle">Registrar</h2><div class="sub">Indica la fecha y hora de la firma.</div></div>
+      <button class="iconbtn" onclick="closeOverlay('overlayFecha')">✕</button>
+    </div>
+    <div class="ficha-body">
+      <div class="fgrid">
+        <div class="field"><label>Fecha</label><input type="date" id="fh_fecha"></div>
+        <div class="field"><label>Hora</label><input type="time" id="fh_hora"></div>
+      </div>
+    </div>
+    <div class="ficha-foot" style="justify-content:flex-end">
+      <button class="btn" onclick="closeOverlay('overlayFecha')">Cancelar</button>
+      <button class="btn primary" id="fh_confirm">Registrar firma</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlayConfirm">
+  <div class="ficha" style="max-width:440px">
+    <div class="ficha-head">
+      <div><h2 id="confTitle">Confirmar</h2></div>
+      <button class="iconbtn" onclick="closeOverlay('overlayConfirm')">✕</button>
+    </div>
+    <div class="ficha-body"><div id="confMsg" style="font-size:14px;white-space:pre-line"></div></div>
+    <div class="ficha-foot" style="justify-content:flex-end">
+      <button class="btn" onclick="closeOverlay('overlayConfirm')">Cancelar</button>
+      <button class="btn danger" id="confOk">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====== EDICIÓN GESTIÓN DOCUMENTAL ====== -->
+<div class="overlay" id="overlayGD">
+  <div class="ficha" style="max-width:680px">
+    <div class="ficha-head">
+      <div><h2 id="gdTitle">Registro</h2><div class="sub" id="gdSub"></div></div>
+      <button class="iconbtn" onclick="closeOverlay('overlayGD')">✕</button>
+    </div>
+    <div class="ficha-body" id="gdBody"></div>
+    <div class="ficha-foot">
+      <div id="gdFootLeft"></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="closeOverlay('overlayGD')">Cancelar</button>
+        <button class="btn primary" onclick="gdGuardar()">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   GILMEDICA · CONTROL DOCUMENTAL  (Firestore + tiempo real)
+   ============================================================ */
+
+/* Estados fijos del flujo (clave estable + color requerido) */
+const ESTADOS = [
+  {key:'elaboracion', nombre:'En elaboración',      color:'gris'},
+  {key:'revision',    nombre:'En revisión',         color:'amarillo'},
+  {key:'aprobacion',  nombre:'En aprobación',       color:'azul'},
+  {key:'vigente',     nombre:'Vigente',             color:'verde'},
+  {key:'publicado',   nombre:'Vigente y publicado', color:'verde'},
+  {key:'obsoleto',    nombre:'Obsoleto',            color:'rojo'},
+];
+const ESTADO = Object.fromEntries(ESTADOS.map(e=>[e.key,e]));
+const PERMISOS = ['Ver','Crear','Editar','Elaborar','Revisar','Aprobar','Configurar'];
+
+/* ---------- Estado de la base ---------- */
+let db = null;
+
+function seed(){
+  return {
+    config:{
+      procesos:[mk('Gestión de Calidad'),mk('Comercial')],
+      subprocesos:[mk('Control documental'),mk('Auditorías'),mk('Ventas')],
+      tiposDocumento:[mk('Manual'),mk('Procedimiento'),mk('Instructivo'),mk('Política')],
+      origenes:[mk('Interno'),mk('Externo'),mk('Legal/Regulatorio')],
+      usuarios:[
+        {id:uid(),nombre:'Sergio',cargo:'Jefe de Calidad',firma:'S. (Calidad)',correo:''},
+      ],
+      perfiles:[
+        {id:uid(),nombre:'Administrador',permisos:[...PERMISOS]},
+        {id:uid(),nombre:'Consulta',permisos:['Ver']},
+      ],
+      clasificaciones:[mk('Público'),mk('Confidencial')],
+      recuperaciones:[mk('Cronológica'),mk('Alfabética')],
+      disposiciones:[mk('Destrucción'),mk('Archivo muerto')],
+    },
+    documentos:[],
+    registros:[],
+    gestion:{
+      dependencias:[{id:uid(),codigo:'100',nombre:'Gerencia General'},{id:uid(),codigo:'200',nombre:'Gestión de Calidad'}],
+      series:[],subseries:[],ccd:[],trd:[],tvd:[]
+    },
+  };
+}
+function mk(n){return {id:uid(),nombre:n}}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+
+function clone(o){return JSON.parse(JSON.stringify(o));}
+
+/* Normalizaciones y migraciones sobre el objeto db (en memoria) */
+function migrate(){
+  db.config = db.config||{};
+  ['procesos','subprocesos','tiposDocumento','origenes','usuarios','perfiles','clasificaciones','recuperaciones','disposiciones']
+    .forEach(k=>db.config[k]=db.config[k]||[]);
+  // Migración: si existen subprocesos anidados en procesos, se aplanan a lista independiente
+  db.config.procesos.forEach(p=>{
+    if(p.subprocesos){p.subprocesos.forEach(s=>db.config.subprocesos.push({id:s.id,nombre:s.nombre}));delete p.subprocesos;}
+  });
+  db.documentos=db.documentos||[];
+  db.registros=db.registros||[];
+  db.gestion=db.gestion||{};
+  db.gestion.dependencias=db.gestion.dependencias||[];
+  db.gestion.series=db.gestion.series||[];
+  db.gestion.subseries=db.gestion.subseries||[];
+  db.gestion.ccd=db.gestion.ccd||[];
+  db.gestion.trd=db.gestion.trd||[];
+  db.gestion.tvd=db.gestion.tvd||[];
+  // Migración: clasificación archivística de campo simple a arreglo (múltiples series/subseries)
+  [...db.documentos,...db.registros].forEach(d=>{
+    if(!d.clasificacionArchivistica){
+      d.clasificacionArchivistica = d.serieId ? [{serieId:d.serieId,subserieId:d.subserieId||''}] : [];
+    }
+  });
+}
+
+/* Lee una colección de Firestore y la devuelve como arreglo */
+async function readColl(name){
+  const fb=window.FB;
+  const snap=await fb.getDocs(fb.collection(fb.fdb,name));
+  const arr=[];snap.forEach(d=>arr.push(d.data()));return arr;
+}
+
+/* Carga el estado desde Firestore. Si la base está vacía, siembra los valores por defecto. */
+async function load(){
+  const fb=window.FB;
+  if(!fb)throw new Error('Firebase no inicializado');
+  const cfgSnap=await fb.getDoc(fb.doc(fb.fdb,'meta','config'));
+  if(!cfgSnap.exists()){
+    db=seed();migrate();
+    lastSynced=emptyState();
+    await persistDiff();            // escribe la semilla
+    lastSavedSnapshot=JSON.stringify(db);
+    updateHistoryButtons&&updateHistoryButtons();
+    return;
+  }
+  const meta=cfgSnap.data();
+  db={
+    config: meta.config||{},
+    documentos: await readColl('documentos'),
+    registros: await readColl('registros'),
+    gestion:{
+      dependencias: await readColl('dependencias'),
+      series: await readColl('series'),
+      subseries: await readColl('subseries'),
+      tvd: await readColl('tvd'),
+      ccd: meta.ccd||[], trd: meta.trd||[]
+    }
+  };
+  migrate();
+  lastSynced=clone(db);
+  lastSavedSnapshot=JSON.stringify(db);
+}
+function emptyState(){return {config:{},documentos:[],registros:[],gestion:{dependencias:[],series:[],subseries:[],tvd:[],ccd:[],trd:[]}};}
+/* ---------- Deshacer / Rehacer (undo/redo) ---------- */
+let undoStack=[];
+let redoStack=[];
+let lastSavedSnapshot=null;
+let lastSynced=null;            // último estado confirmado en Firestore (objeto)
+const UNDO_MAX=40;
+function save(){
+  // Acción nueva: guarda el estado anterior y limpia la pila de rehacer
+  if(lastSavedSnapshot!==null){
+    undoStack.push(lastSavedSnapshot);
+    if(undoStack.length>UNDO_MAX)undoStack.shift();
+  }
+  redoStack=[];
+  lastSavedSnapshot=JSON.stringify(db);
+  updateHistoryButtons();
+  schedulePersist();
+}
+/* ---------- Sincronización con Firestore (por documento) ---------- */
+let persistTimer=null,persisting=false,persistAgain=false;
+function schedulePersist(){clearTimeout(persistTimer);persistTimer=setTimeout(runPersist,250);}
+async function runPersist(){
+  if(persisting){persistAgain=true;return;}
+  persisting=true;setSyncState('sync');
+  try{await persistDiff();setSyncState('ok');}
+  catch(e){console.error('persist',e);setSyncState('err');toast('No se pudo sincronizar con la nube. Revisa tu conexión.');}
+  persisting=false;
+  if(persistAgain){persistAgain=false;schedulePersist();}
+}
+function setSyncState(s){const el=document.getElementById('syncState');if(!el)return;
+  el.textContent=s==='sync'?'Sincronizando…':s==='ok'?'Sincronizado':'Sin conexión';
+  el.className='sync-'+(s==='err'?'err':s==='sync'?'pend':'ok');}
+function collOps(ops,name,arr,lastArr){
+  const fb=window.FB;
+  const lastById={};(lastArr||[]).forEach(x=>lastById[x.id]=x);
+  const curIds={};
+  (arr||[]).forEach(item=>{curIds[item.id]=1;const prev=lastById[item.id];
+    if(!prev||JSON.stringify(prev)!==JSON.stringify(item))ops.push({type:'set',ref:fb.doc(fb.fdb,name,String(item.id)),data:JSON.parse(JSON.stringify(item))});
+  });
+  (lastArr||[]).forEach(x=>{if(!curIds[x.id])ops.push({type:'del',ref:fb.doc(fb.fdb,name,String(x.id))});});
+}
+async function persistDiff(){
+  const fb=window.FB;if(!fb||!lastSynced)return;
+  const ops=[];
+  collOps(ops,'documentos',db.documentos,lastSynced.documentos);
+  collOps(ops,'registros',db.registros,lastSynced.registros);
+  collOps(ops,'series',db.gestion.series,lastSynced.gestion.series);
+  collOps(ops,'subseries',db.gestion.subseries,lastSynced.gestion.subseries);
+  collOps(ops,'dependencias',db.gestion.dependencias,lastSynced.gestion.dependencias);
+  collOps(ops,'tvd',db.gestion.tvd,lastSynced.gestion.tvd);
+  const cfgNow=JSON.stringify({config:db.config,ccd:db.gestion.ccd,trd:db.gestion.trd});
+  const cfgLast=JSON.stringify({config:lastSynced.config,ccd:lastSynced.gestion.ccd,trd:lastSynced.gestion.trd});
+  if(cfgNow!==cfgLast)ops.push({type:'set',ref:fb.doc(fb.fdb,'meta','config'),data:JSON.parse(cfgNow)});
+  if(!ops.length)return;
+  for(let i=0;i<ops.length;i+=450){
+    const batch=fb.writeBatch(fb.fdb);
+    ops.slice(i,i+450).forEach(o=>{o.type==='set'?batch.set(o.ref,o.data):batch.delete(o.ref);});
+    await batch.commit();
+  }
+  lastSynced=clone(db);
+}
+
+/* ---------- Sincronización en tiempo real (onSnapshot) ---------- */
+let realtimeOn=false,rerenderTimer=null;
+function scheduleRerender(){
+  clearTimeout(rerenderTimer);
+  rerenderTimer=setTimeout(()=>{
+    const ae=document.activeElement;
+    if(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)){scheduleRerender();return;} // no interrumpir mientras se escribe
+    const tab=document.querySelector('nav.tabs button.active');
+    if(tab)switchTab(tab.dataset.tab);
+  },300);
+}
+function dbArrFor(name){return {documentos:db.documentos,registros:db.registros,series:db.gestion.series,subseries:db.gestion.subseries,dependencias:db.gestion.dependencias,tvd:db.gestion.tvd}[name];}
+function lastArrFor(name){return {documentos:lastSynced.documentos,registros:lastSynced.registros,series:lastSynced.gestion.series,subseries:lastSynced.gestion.subseries,dependencias:lastSynced.gestion.dependencias,tvd:lastSynced.gestion.tvd}[name];}
+function applyRemoteDoc(name,data,removed){
+  const arr=dbArrFor(name),la=lastArrFor(name);if(!arr)return false;let changed=false;
+  const i=arr.findIndex(x=>x.id===data.id);
+  if(removed){if(i>=0){arr.splice(i,1);changed=true;}}
+  else{if(i>=0){if(JSON.stringify(arr[i])!==JSON.stringify(data)){arr[i]=data;changed=true;}}else{arr.push(data);changed=true;}}
+  const j=la.findIndex(x=>x.id===data.id);
+  if(removed){if(j>=0)la.splice(j,1);}else{if(j>=0)la[j]=clone(data);else la.push(clone(data));}
+  return changed;
+}
+function attachRealtime(){
+  if(realtimeOn)return;const fb=window.FB;if(!fb||!fb.onSnapshot)return;realtimeOn=true;
+  ['documentos','registros','series','subseries','dependencias','tvd'].forEach(name=>{
+    fb.onSnapshot(fb.collection(fb.fdb,name),snap=>{
+      let changed=false;
+      snap.docChanges().forEach(ch=>{
+        if(ch.doc.metadata.hasPendingWrites)return;      // es un cambio local propio: ya está en db
+        if(applyRemoteDoc(name,ch.doc.data(),ch.type==='removed'))changed=true;
+      });
+      if(changed)scheduleRerender();
+    },err=>console.error('realtime '+name,err));
+  });
+  fb.onSnapshot(fb.doc(fb.fdb,'meta','config'),snap=>{
+    if(!snap.exists()||snap.metadata.hasPendingWrites)return;
+    const meta=snap.data();
+    db.config=meta.config||db.config;db.gestion.ccd=meta.ccd||[];db.gestion.trd=meta.trd||[];
+    lastSynced.config=clone(db.config);lastSynced.gestion.ccd=clone(db.gestion.ccd);lastSynced.gestion.trd=clone(db.gestion.trd);
+    fillListFilters();scheduleRerender();
+  },err=>console.error('realtime config',err));
+}
+function updateHistoryButtons(){
+  const u=document.getElementById('undoBtn');if(u)u.disabled=undoStack.length===0;
+  const r=document.getElementById('redoBtn');if(r)r.disabled=redoStack.length===0;
+}
+function restaurarSnapshot(snap){
+  db=JSON.parse(snap);
+  lastSavedSnapshot=snap;
+  schedulePersist();
+  updateHistoryButtons();
+  fillListFilters();
+  const tab=document.querySelector('nav.tabs button.active');
+  switchTab(tab?tab.dataset.tab:'documentos');
+}
+function undo(){
+  if(!undoStack.length){toast('No hay acciones para deshacer');return;}
+  redoStack.push(lastSavedSnapshot);          // el estado actual queda disponible para rehacer
+  restaurarSnapshot(undoStack.pop());
+  toast('Última acción deshecha');
+}
+function redo(){
+  if(!redoStack.length){toast('No hay acciones para rehacer');return;}
+  undoStack.push(lastSavedSnapshot);          // permite volver a deshacer
+  restaurarSnapshot(redoStack.pop());
+  toast('Acción rehecha');
+}
+
+/* ---------- Helpers ---------- */
+function esc(s){return (s==null?'':String(s)).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+function badge(estadoKey){const e=ESTADO[estadoKey]||ESTADO.elaboracion;return `<span class="badge badge-${e.color}">${esc(e.nombre)}</span>`;}
+function nombreProceso(id){const p=db.config.procesos.find(x=>x.id===id);return p?p.nombre:'';}
+function nombreSub(sid){const s=db.config.subprocesos.find(x=>x.id===sid);return s?s.nombre:'';}
+function getUser(id){return db.config.usuarios.find(u=>u.id===id);}
+function nombrePerfil(id){const p=db.config.perfiles.find(x=>x.id===id);return p?p.nombre:'';}
+function optPerfiles(val){return `<option value="">— sin perfil —</option>`+db.config.perfiles.map(p=>`<option value="${p.id}" ${p.id===val?'selected':''}>${esc(p.nombre)}</option>`).join('');}
+function now(){const d=new Date();return {fecha:d.toLocaleDateString('es-CO'),hora:d.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'})};}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2600);}
+
+/* ============================================================
+   NAVEGACIÓN
+   ============================================================ */
+function switchTab(tab){
+  document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+tab).classList.add('active');
+  if(tab==='documentos')renderDocumentos();
+  if(tab==='registros')renderRegistros();
+  if(tab==='aprobaciones')renderAprobaciones();
+  if(tab==='gestion')renderGestion();
+  if(tab==='datos')renderDatos();
+}
+
+/* ============================================================
+   GESTIÓN DOCUMENTAL · Res. 8934/2014 (SIC) — CCD / TRD / TVD
+   Modelo: series y subseries son datos maestros (con retención).
+   Los documentos/formatos se asignan a una serie/subserie y la TRD
+   se genera automáticamente listando los tipos documentales.
+   ============================================================ */
+let gdActive='ccd';
+
+/* ---- Helpers de clasificación archivística ---- */
+function depName(id){const d=db.gestion.dependencias.find(x=>x.id===id);return d?`${d.codigo?d.codigo+' \u00b7 ':''}${d.nombre}`:'';}
+function serieById(id){return db.gestion.series.find(x=>x.id===id);}
+function subserieById(id){return db.gestion.subseries.find(x=>x.id===id);}
+function serieLabel(id){const s=serieById(id);return s?`${s.codigo?s.codigo+' \u00b7 ':''}${s.nombre}`:'';}
+function subserieLabel(id){const s=subserieById(id);return s?`${s.codigo?s.codigo+' \u00b7 ':''}${s.nombre}`:'';}
+function dispText(disp){disp=disp||{};const L={ct:'CT',e:'E',m:'M/D',s:'S'};return ['ct','e','m','s'].filter(k=>disp[k]).map(k=>L[k]).join(' ')||'\u2014';}
+function dispTags(v){const L={ct:'CT',e:'E',m:'M/D',s:'S'};return `<span class="disp-tags">${['ct','e','m','s'].map(k=>`<span class="disp-tag ${(v&&v[k])?'on':''}" title="${L[k]}">${L[k]}</span>`).join('')}</span>`;}
+/* Tipos documentales = documentos + formatos asignados (excluye obsoletos para la vista) */
+function todosLosItems(){return [...db.documentos.map(d=>({...d,_t:'D'})),...db.registros.map(d=>({...d,_t:'F'}))];}
+/* En la TRD NO se auto-listan documentos ni formatos (la tabla se mantiene corta).
+   La relación serie/subserie de cada documento/formato se conserva en su ficha.
+   Los tipos documentales de la TRD se diligencian manualmente por serie/subserie. */
+function itemsAutoTRD(){return [];}
+function tiposDeSerie(serieId){return itemsAutoTRD();}
+function tiposDeSubserie(subId){return itemsAutoTRD();}
+function tiposHTML(items){
+  if(!items.length)return '<span class="pub-no" style="font-size:11.5px">\u2014</span>';
+  return items.map(d=>`<div style="font-size:11.5px"><span class="codecell" style="font-size:11px">${esc(d.codigo||'')}</span> ${esc(d.nombre||'')} <span style="color:var(--muted-2)">(${d._t==='D'?'doc':'fmt'} v${esc(d.version||'1')})</span></div>`).join('');
+}
+function tiposCellHTML(items,manual){
+  manual=manual||[];
+  let html=items.map(d=>`<div style="font-size:11.5px"><span class="codecell" style="font-size:11px">${esc(d.codigo||'')}</span> ${esc(d.nombre||'')} <span style="color:var(--muted-2)">(${d._t==='D'?'doc':'fmt'} v${esc(d.version||'1')})</span></div>`).join('');
+  html+=manual.map(m=>`<div style="font-size:11.5px;color:#647082">${esc(m)}</div>`).join('');
+  return html||'<span class="pub-no" style="font-size:11.5px">\u2014</span>';
+}
+function tiposPlano(items,manual){return [...items.map(d=>`${d.codigo||''} ${d.nombre||''}`.trim()),...((manual||[]))].join(' | ');}
+
+function renderGestion(){renderGdDependencias();gdTab(gdActive);}
+function gdTab(key){
+  gdActive=key;
+  document.querySelectorAll('#gdSubtabs button').forEach(b=>b.classList.toggle('active',b.dataset.gd===key));
+  if(key==='ccd')renderCCD();else if(key==='trd')renderTRD();else renderTVD();
+}
+
+/* ---- Dependencias (compartidas) ---- */
+let editingDep=null;
+function renderGdDependencias(){
+  const cont=document.getElementById('gdDependencias');
+  const deps=db.gestion.dependencias;
+  let rows=deps.map(d=>{
+    if(editingDep===d.id){
+      return `<div class="chip" style="border-radius:8px;gap:6px;padding:8px 10px">
+        <input class="edit-inp" id="ed_dep_cod" value="${esc(d.codigo||'')}" placeholder="C\u00f3digo" style="width:90px">
+        <input class="edit-inp" id="ed_dep_nom" value="${esc(d.nombre||'')}" placeholder="Nombre" style="width:220px">
+        <button class="ok" onclick="gdSaveDep('${d.id}')">\u2713</button>
+        <button onclick="editingDep=null;renderGdDependencias()">\u2715</button></div>`;
+    }
+    return `<span class="chip"><strong>${esc(d.codigo||'')}</strong> ${esc(d.nombre||'')}
+      <button class="ed" title="Editar" onclick="editingDep='${d.id}';renderGdDependencias()">\u270e</button>
+      <button title="Eliminar" onclick="gdDelDep('${d.id}')">\u2715</button></span>`;
+  }).join('');
+  cont.innerHTML=`<div class="chips">${rows||'<span class="pub-no" style="font-size:12.5px">Sin dependencias.</span>'}</div>
+    <div class="addrow" style="flex-wrap:wrap">
+      <input id="dep_cod" placeholder="C\u00f3digo (ej. 100)" style="max-width:130px">
+      <input id="dep_nom" placeholder="Nombre de la dependencia / unidad administrativa" style="min-width:220px;flex:1">
+      <button class="btn primary sm" onclick="gdAddDep()">Agregar</button>
+    </div>`;
+}
+function gdAddDep(){const cod=val('dep_cod'),nom=val('dep_nom');if(!nom){toast('Escribe el nombre de la dependencia');return;}db.gestion.dependencias.push({id:uid(),codigo:cod,nombre:nom});save();renderGdDependencias();}
+function gdSaveDep(id){const d=db.gestion.dependencias.find(x=>x.id===id);const nom=val('ed_dep_nom');if(!nom){toast('El nombre no puede quedar vac\u00edo');return;}if(d){d.codigo=val('ed_dep_cod');d.nombre=nom;}editingDep=null;save();renderGdDependencias();toast('Dependencia actualizada');}
+function gdDelDep(id){pedirConfirmacion('Eliminar dependencia','\u00bfEliminar esta dependencia?\n\nPodr\u00e1s revertirlo con \u201cDeshacer\u201d.',()=>{db.gestion.dependencias=db.gestion.dependencias.filter(x=>x.id!==id);save();renderGdDependencias();gdTab(gdActive);toast('Dependencia eliminada');},'Eliminar');}
+
+/* ---- Modal gen\u00e9rico GD ---- */
+let gdCtx={draft:null,fields:null},gdSaveCb=null,gdDelCb=null;
+function gdModal(titulo,sub,fields,draft,onSave,onDelete){
+  gdCtx={draft,fields};gdSaveCb=onSave;gdDelCb=onDelete||null;
+  document.getElementById('gdTitle').textContent=titulo;
+  document.getElementById('gdSub').textContent=sub||'';
+  document.getElementById('gdBody').innerHTML=fields.map(f=>gdField(f,draft[f.k])).join('');
+  document.getElementById('gdFootLeft').innerHTML=onDelete?`<button class="btn danger" onclick="gdModalDelete()">\ud83d\uddd1 Eliminar</button>`:'';
+  document.getElementById('overlayGD').classList.add('open');
+}
+function gdField(f,v){
+  const id='gd_'+f.k;
+  if(f.type==='select')
+    return `<div class="field" style="margin-bottom:14px"><label>${esc(f.h)}</label><select id="${id}">${opt(f.options,v,f.ph||'\u2014 seleccionar \u2014')}</select></div>`;
+  if(f.type==='textarea')
+    return `<div class="field" style="margin-bottom:14px"><label>${esc(f.h)}</label><textarea id="${id}">${esc(v||'')}</textarea></div>`;
+  if(f.type==='lines')
+    return `<div class="field" style="margin-bottom:14px"><label>${esc(f.h)}</label><textarea id="${id}">${esc((v||[]).join('\n'))}</textarea></div>`;
+  if(f.type==='procsug')
+    return `<div class="field" style="margin-bottom:14px"><label>${esc(f.h)}</label><textarea id="${id}" style="min-height:90px">${esc(v||'')}</textarea>
+      <button type="button" class="btn sm" style="margin-top:6px" onclick="gdSugerirProcedimiento()">\u2728 Sugerir seg\u00fan disposici\u00f3n final</button></div>`;
+  if(f.type==='num')
+    return `<div class="field" style="margin-bottom:14px"><label>${esc(f.h)}</label><input type="number" min="0" id="${id}" value="${esc(v||'')}"></div>`;
+  if(f.type==='disp'){v=v||{};
+    return `<div class="field" style="margin-bottom:14px"><label>${esc(f.h)}</label><div class="gd-disp">
+      <label><input type="checkbox" id="${id}_ct" ${v.ct?'checked':''}> CT \u00b7 Conservaci\u00f3n total</label>
+      <label><input type="checkbox" id="${id}_e" ${v.e?'checked':''}> E \u00b7 Eliminaci\u00f3n</label>
+      <label><input type="checkbox" id="${id}_m" ${v.m?'checked':''}> M/D \u00b7 Digitalización</label>
+      <label><input type="checkbox" id="${id}_s" ${v.s?'checked':''}> S \u00b7 Selecci\u00f3n</label></div></div>`;}
+  return `<div class="field" style="margin-bottom:14px"><label>${esc(f.h)}</label><input id="${id}" value="${esc(v||'')}"></div>`;
+}
+function gdGuardar(){
+  const d=gdCtx.draft;
+  gdCtx.fields.forEach(f=>{const id='gd_'+f.k;
+    if(f.type==='disp')d[f.k]={ct:document.getElementById(id+'_ct').checked,e:document.getElementById(id+'_e').checked,m:document.getElementById(id+'_m').checked,s:document.getElementById(id+'_s').checked};
+    else if(f.type==='lines')d[f.k]=val(id).split('\n').map(x=>x.trim()).filter(Boolean);
+    else d[f.k]=val(id);});
+  gdSaveCb(d);
+}
+function gdModalDelete(){if(gdDelCb)gdDelCb();}
+function depOptions(){return db.gestion.dependencias.map(d=>({id:d.id,nombre:(d.codigo?d.codigo+' \u00b7 ':'')+d.nombre}));}
+function serieOptions(){return db.gestion.series.map(s=>({id:s.id,nombre:(s.codigo?s.codigo+' \u00b7 ':'')+s.nombre+(s.dependenciaId?'  ['+depName(s.dependenciaId)+']':'')}));}
+function subserieOptionsDe(serieId){return db.gestion.subseries.filter(s=>s.serieId===serieId).map(s=>({id:s.id,nombre:(s.codigo?s.codigo+' \u00b7 ':'')+s.nombre}));}
+function onSerieFichaChange(){const sid=document.getElementById('f_serie').value;document.getElementById('f_subserie').innerHTML=opt(subserieOptionsDe(sid),'','\u2014 subserie \u2014');}
+function clasifRowsHTML(){
+  const list=(fichaCtx.draft&&fichaCtx.draft.clasificacionArchivistica)||[];
+  if(!list.length)return '<div style="color:var(--muted-2);font-size:12.5px;margin-bottom:8px">Sin clasificación asignada.</div>';
+  return list.map((c,i)=>`<div class="fgrid" style="margin-bottom:8px;align-items:end">
+    <div class="field"><label>Serie ${i+1}</label><select id="cl_serie_${i}" onchange="onClasifSerieChange(${i})">${opt(serieOptions(),c.serieId,'\u2014 serie \u2014')}</select></div>
+    <div class="field"><label>Subserie ${i+1}</label>
+      <div style="display:flex;gap:6px">
+        <select id="cl_sub_${i}" style="flex:1">${opt(subserieOptionsDe(c.serieId),c.subserieId,'\u2014 subserie \u2014')}</select>
+        <button type="button" class="btn danger sm" onclick="removeClasifRow(${i})" title="Quitar">\u2715</button>
+      </div></div>
+  </div>`).join('');
+}
+function syncClasifFromDOM(){
+  const list=(fichaCtx.draft&&fichaCtx.draft.clasificacionArchivistica)||[];
+  list.forEach((c,i)=>{const se=document.getElementById('cl_serie_'+i),su=document.getElementById('cl_sub_'+i);if(se)c.serieId=se.value;if(su)c.subserieId=su.value;});
+}
+function addClasifRow(){syncClasifFromDOM();fichaCtx.draft.clasificacionArchivistica=fichaCtx.draft.clasificacionArchivistica||[];fichaCtx.draft.clasificacionArchivistica.push({serieId:'',subserieId:''});document.getElementById('clasifList').innerHTML=clasifRowsHTML();}
+function removeClasifRow(i){syncClasifFromDOM();fichaCtx.draft.clasificacionArchivistica.splice(i,1);document.getElementById('clasifList').innerHTML=clasifRowsHTML();}
+function onClasifSerieChange(i){syncClasifFromDOM();document.getElementById('cl_sub_'+i).innerHTML=opt(subserieOptionsDe(fichaCtx.draft.clasificacionArchivistica[i].serieId),'','\u2014 subserie \u2014');}
+
+/* ---- CCD: series y subseries (datos maestros) ---- */
+const ENTIDAD_PRODUCTORA='Gilmedica S.A.S.';
+let gdSel={ccd:null,trd:null,tvd:null};
+function gdSelectDep(instr,depKey){gdSel[instr]=depKey;gdRerenderActive();}
+function gdSelector(instr,secs,sel){
+  if(!secs.length)return '';
+  return `<div class="gd-index"><span class="gd-index-lbl">Oficina productora:</span>
+    <select class="gd-select" onchange="gdSelectDep('${instr}',this.value)">
+      ${secs.map(s=>`<option value="${s.depKey}" ${s.depKey===sel?'selected':''}>${esc(s.label)}</option>`).join('')}
+    </select></div>`;
+}
+function gdElegirSeccion(instr,secs){
+  let sel=gdSel[instr];
+  if(!sel||!secs.find(s=>s.depKey===sel))sel=secs.length?secs[0].depKey:'';
+  gdSel[instr]=sel;
+  const sec=secs.find(s=>s.depKey===sel);
+  return gdSelector(instr,secs,sel)+(sec?sec.html:'<div class="card"><div class="empty">Selecciona una oficina productora.</div></div>');
+}
+function renderCCD(){
+  const cont=document.getElementById('gdContent');
+  const deps=db.gestion.dependencias, series=db.gestion.series;
+  const byCode=(a,b)=>String(a.codigo||'').localeCompare(String(b.codigo||''),undefined,{numeric:true})||String(a.nombre||'').localeCompare(String(b.nombre||''));
+  let intro=`<div class="card" style="margin-bottom:16px"><div class="toolbar">
+      <div><strong style="font-size:14px">Cuadro de Clasificación Documental</strong>
+      <div style="color:var(--muted);font-size:12px;margin-top:2px">Un cuadro por oficina productora. Usa los botones del encabezado de cada cuadro para agregar series o subseries a esa oficina.</div></div>
+    </div></div>`;
+  if(!series.length && !deps.length){
+    cont.innerHTML=intro+`<div class="card"><div class="empty"><div class="big">Sin información</div>Crea dependencias y luego series/subseries.</div></div>`;return;
+  }
+  const grupos=deps.map(d=>({dep:d,series:series.filter(s=>s.dependenciaId===d.id).slice().sort(byCode)}));
+  const sinDep=series.filter(s=>!s.dependenciaId||!deps.find(d=>d.id===s.dependenciaId)).slice().sort(byCode);
+  if(sinDep.length)grupos.push({dep:null,series:sinDep});
+
+  const secs=grupos.map(g=>{
+    const id='gdsec-ccd-'+(g.dep?g.dep.id:'sindep');
+    const label=g.dep?depName(g.dep.id):'(sin dependencia)';
+    let filas='';
+    if(!g.series.length){
+      filas=`<tr><td colspan="3"><div class="empty" style="padding:22px">Sin series asignadas a esta dependencia.</div></td></tr>`;
+    }else{
+      g.series.forEach(s=>{
+        filas+=`<tr class="row-link" onclick="editSerie('${s.id}')">
+          <td class="codecell">${esc(s.codigo||'—')}</td>
+          <td><strong>${esc(s.nombre||'')}</strong> <span style="color:var(--muted-2);font-size:11px">(serie)</span></td>
+          <td style="text-align:right" onclick="event.stopPropagation()"><button class="btn danger sm" onclick="delSerie('${s.id}')">Eliminar</button></td></tr>`;
+        db.gestion.subseries.filter(ss=>ss.serieId===s.id).slice().sort(byCode).forEach(ss=>{
+          filas+=`<tr class="row-link ver-row" onclick="editSubserie('${ss.id}')">
+            <td>↳ <span class="codecell">${esc(ss.codigo||'—')}</span></td>
+            <td>${esc(ss.nombre||'')} <span style="color:var(--muted-2);font-size:11px">(subserie)</span></td>
+            <td style="text-align:right" onclick="event.stopPropagation()"><button class="btn danger sm" onclick="delSubserie('${ss.id}')">Eliminar</button></td></tr>`;
+        });
+      });
+    }
+    const html=`<div class="trd-section" id="${id}">
+      <div class="trd-head" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+        <div>
+          <div><span class="trd-lbl">ENTIDAD PRODUCTORA:</span> ${esc(ENTIDAD_PRODUCTORA)}</div>
+          <div><span class="trd-lbl">OFICINA PRODUCTORA:</span> ${g.dep?esc(depName(g.dep.id)):'(sin dependencia asignada)'}</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-shrink:0">
+          <button class="btn sm" onclick="nuevaSerie('${g.dep?g.dep.id:''}')">＋ Nueva serie</button>
+          <button class="btn sm" onclick="nuevaSubserie('${g.dep?g.dep.id:''}')">＋ Nueva subserie</button>
+        </div>
+      </div>
+      <div class="card"><table>
+        <thead><tr><th style="width:130px">Código</th><th>Serie / Subserie documental</th><th style="text-align:right">Acción</th></tr></thead>
+        <tbody>${filas}</tbody></table></div>
+    </div>`;
+    return {id,label,depKey:(g.dep?g.dep.id:'sindep'),html};
+  });
+  cont.innerHTML=intro+gdElegirSeccion('ccd',secs);
+}
+
+function renderTRD(){
+  const cont=document.getElementById('gdContent');
+  const deps=db.gestion.dependencias, series=db.gestion.series;
+  let intro=`<div class="card" style="margin-bottom:16px"><div class="toolbar">
+      <div><strong style="font-size:14px">Tablas de Retención Documental</strong>
+      <div style="color:var(--muted);font-size:12px;margin-top:2px">Una tabla por oficina productora. Los "tipos documentales" se diligencian manualmente al editar la retención de cada serie/subserie (la relación de los documentos y formatos con su serie/subserie se conserva en la ficha de cada uno). Clic en una fila para editar. (CT: Conservación total · E: Eliminación · M/D: Digitalización · S: Selección)</div></div>
+    </div></div>`;
+  if(!series.length && !deps.length){
+    cont.innerHTML=intro+`<div class="card"><div class="empty"><div class="big">Sin información</div>Crea dependencias y series en el Cuadro de Clasificación.</div></div>`;
+    return;
+  }
+  const grupos=deps.map(d=>({dep:d,series:series.filter(s=>s.dependenciaId===d.id)}));
+  const sinDep=series.filter(s=>!s.dependenciaId||!deps.find(d=>d.id===s.dependenciaId));
+  if(sinDep.length)grupos.push({dep:null,series:sinDep});
+
+  const secs=grupos.map(g=>{
+    const id='gdsec-trd-'+(g.dep?g.dep.id:'sindep');
+    const label=g.dep?depName(g.dep.id):'(sin dependencia)';
+    let filas='';
+    if(!g.series.length){
+      filas=`<tr><td colspan="8"><div class="empty" style="padding:22px">Sin series asignadas a esta dependencia.</div></td></tr>`;
+    }else{
+      g.series.forEach(s=>{
+        filas+=trdRow('serie',s,tiposDeSerie(s.id),false);
+        db.gestion.subseries.filter(ss=>ss.serieId===s.id).forEach(ss=>{filas+=trdRow('subserie',ss,tiposDeSubserie(ss.id),true);});
+      });
+    }
+    const html=`<div class="trd-section" id="${id}">
+      <div class="trd-head" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+        <div>
+          <div><span class="trd-lbl">ENTIDAD PRODUCTORA:</span> ${esc(ENTIDAD_PRODUCTORA)}</div>
+          <div><span class="trd-lbl">OFICINA PRODUCTORA:</span> ${g.dep?esc(depName(g.dep.id)):'(sin dependencia asignada)'}</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-shrink:0">
+          <button class="btn sm" onclick="nuevaSerie('${g.dep?g.dep.id:''}')">＋ Nueva serie</button>
+          <button class="btn sm" onclick="nuevaSubserie('${g.dep?g.dep.id:''}')">＋ Nueva subserie</button>
+        </div>
+      </div>
+      <div class="card"><div style="overflow-x:auto"><table>
+        <thead><tr><th style="width:90px">Código</th><th>Serie / Subserie</th><th>Tipos documentales</th><th style="width:90px">Soporte</th>
+          <th style="width:60px">A. Gestión</th><th style="width:60px">A. Central</th><th>Disp.</th><th>Procedimiento</th></tr></thead>
+        <tbody>${filas}</tbody></table></div></div>
+    </div>`;
+    return {id,label,depKey:(g.dep?g.dep.id:'sindep'),html};
+  });
+  cont.innerHTML=intro+gdElegirSeccion('trd',secs);
+}
+
+function trdRow(kind,it,tipos,isSub){
+  return `<tr class="row-link${isSub?' ver-row':''}" onclick="editRetencion('${kind}','${it.id}')">
+    <td>${isSub?'\u21b3 ':''}<span class="codecell">${esc(it.codigo||'\u2014')}</span></td>
+    <td>${esc(it.nombre||'')} <span style="color:var(--muted-2);font-size:11px">(${isSub?'subserie':'serie'})</span></td>
+    <td>${tiposCellHTML(tipos,it.tiposManual)}</td>
+    <td style="font-size:11.5px">${esc(it.soporte||'\u2014')}</td>
+    <td style="text-align:center">${it.ag!==''&&it.ag!=null?esc(it.ag):'\u2014'}</td>
+    <td style="text-align:center">${it.ac!==''&&it.ac!=null?esc(it.ac):'\u2014'}</td>
+    <td>${dispTags(it.disp)}</td>
+    <td style="font-size:11.5px">${esc(it.procedimiento||'')}</td>
+  </tr>`;
+}
+function gdRerenderActive(){if(gdActive==='ccd')renderCCD();else if(gdActive==='trd')renderTRD();else renderTVD();}
+function serieFieldsBase(){return [
+  {k:'dependenciaId',h:'Dependencia',type:'select',options:depOptions()},
+  {k:'codigo',h:'C\u00f3digo de serie',type:'text'},
+  {k:'nombre',h:'Nombre de la serie',type:'text'}];}
+function nuevaSerie(depId){gdModal('Nueva serie documental','Pertenece a una dependencia',serieFieldsBase(),
+  {id:uid(),dependenciaId:depId||'',codigo:'',nombre:'',ag:'',ac:'',disp:{},procedimiento:'',tiposManual:[]},guardarSerie);}
+function editSerie(id){const s=serieById(id);if(!s)return;gdModal('Editar serie documental','',serieFieldsBase(),JSON.parse(JSON.stringify(s)),guardarSerie,()=>delSerie(id,true));}
+function guardarSerie(d){if(!d.nombre){toast('El nombre de la serie es obligatorio');return;}const a=db.gestion.series;const i=a.findIndex(x=>x.id===d.id);i>=0?a[i]=d:a.push(d);save();closeOverlay('overlayGD');gdRerenderActive();toast('Serie guardada');}
+function delSerie(id,fromModal){pedirConfirmacion('Eliminar serie','\u00bfEliminar esta serie? Las subseries y documentos que la referencian quedar\u00e1n sin serie.\n\nPodr\u00e1s revertirlo con \u201cDeshacer\u201d.',()=>{db.gestion.series=db.gestion.series.filter(x=>x.id!==id);save();if(fromModal)closeOverlay('overlayGD');gdRerenderActive();toast('Serie eliminada');},'Eliminar');}
+function nuevaSubserie(depId){
+  let series=db.gestion.series;
+  if(depId)series=series.filter(s=>s.dependenciaId===depId);
+  if(!series.length){toast(depId?'Crea primero una serie en esta oficina':'Primero crea una serie');return;}
+  const opts=series.map(s=>({id:s.id,nombre:(s.codigo?s.codigo+' \u00b7 ':'')+s.nombre+(s.dependenciaId&&!depId?'  ['+depName(s.dependenciaId)+']':'')}));
+  gdModal('Nueva subserie documental','Pertenece a una serie',[
+    {k:'serieId',h:'Serie',type:'select',options:opts},
+    {k:'codigo',h:'C\u00f3digo de subserie',type:'text'},
+    {k:'nombre',h:'Nombre de la subserie',type:'text'}],
+    {id:uid(),serieId:series.length===1?series[0].id:'',codigo:'',nombre:'',ag:'',ac:'',disp:{},procedimiento:'',tiposManual:[]},guardarSubserie);
+}
+function editSubserie(id){const s=subserieById(id);if(!s)return;gdModal('Editar subserie documental','',[
+    {k:'serieId',h:'Serie',type:'select',options:serieOptions()},
+    {k:'codigo',h:'C\u00f3digo de subserie',type:'text'},
+    {k:'nombre',h:'Nombre de la subserie',type:'text'}],
+    JSON.parse(JSON.stringify(s)),guardarSubserie,()=>delSubserie(id,true));}
+function guardarSubserie(d){if(!d.nombre){toast('El nombre de la subserie es obligatorio');return;}if(!d.serieId){toast('Selecciona la serie');return;}const a=db.gestion.subseries;const i=a.findIndex(x=>x.id===d.id);i>=0?a[i]=d:a.push(d);save();closeOverlay('overlayGD');gdRerenderActive();toast('Subserie guardada');}
+function delSubserie(id,fromModal){pedirConfirmacion('Eliminar subserie','\u00bfEliminar esta subserie?\n\nPodr\u00e1s revertirlo con \u201cDeshacer\u201d.',()=>{db.gestion.subseries=db.gestion.subseries.filter(x=>x.id!==id);save();if(fromModal)closeOverlay('overlayGD');gdRerenderActive();toast('Subserie eliminada');},'Eliminar');}
+
+const PROC_SUGERENCIAS={
+  ct:'Conservación total (CT): cumplido el tiempo de retención en el archivo central, se realiza transferencia secundaria al archivo histórico para su conservación permanente, en razón de sus valores secundarios (histórico y testimonial).',
+  e:'Eliminación (E): documentos de valor administrativo temporal. Cumplida la retención, se eliminan previa aprobación del Comité Institucional de Gestión y Desempeño, levantando acta de eliminación e inventario de los documentos a eliminar; método: triturado (soporte físico) o borrado seguro (soporte electrónico).',
+  m:'Digitalización (M/D): se reproduce el documento mediante digitalización con fines de preservación y consulta, verificando la integridad y legibilidad de la copia; el documento electrónico resultante se conserva según los tiempos definidos.',
+  s:'Selección (S): se conserva una muestra representativa (por ejemplo, un expediente por año o el 10%) por su valor testimonial; el resto se elimina previa aprobación del Comité y con su respectiva acta.'
+};
+function gdSugerirProcedimiento(){
+  const ta=document.getElementById('gd_procedimiento');if(!ta)return;
+  let txt=ta.value.trim();let added=0,anyChecked=false;
+  ['ct','e','m','s'].forEach(k=>{
+    const chk=document.getElementById('gd_disp_'+k);
+    if(chk&&chk.checked){anyChecked=true;const s=PROC_SUGERENCIAS[k];if(!txt.includes(s)){txt=txt?txt+'\n\n'+s:s;added++;}}
+  });
+  if(!anyChecked){toast('Marca primero la disposición final (CT/E/M/S)');return;}
+  ta.value=txt;
+  toast(added?'Sugerencia agregada al procedimiento':'El procedimiento ya incluye esa sugerencia');
+}
+function editRetencion(kind,id){
+  const arr=kind==='serie'?db.gestion.series:db.gestion.subseries;
+  const it=arr.find(x=>x.id===id);if(!it)return;const draft=JSON.parse(JSON.stringify(it));draft.disp=draft.disp||{};
+  gdModal('Retenci\u00f3n \u00b7 '+(it.codigo?it.codigo+' ':'')+it.nombre,'Tiempos, disposici\u00f3n final y tipos no controlados ('+(kind==='serie'?'serie':'subserie')+')',[
+    {k:'ag',h:'Retenci\u00f3n Archivo de Gesti\u00f3n (a\u00f1os)',type:'num'},
+    {k:'ac',h:'Retenci\u00f3n Archivo Central (a\u00f1os)',type:'num'},
+    {k:'soporte',h:'Soporte',type:'select',options:[{id:'F\u00edsico',nombre:'F\u00edsico'},{id:'Electr\u00f3nico',nombre:'Electr\u00f3nico'},{id:'F\u00edsico y electr\u00f3nico',nombre:'F\u00edsico y electr\u00f3nico'}]},
+    {k:'disp',h:'Disposici\u00f3n final',type:'disp'},
+    {k:'tiposManual',h:'Tipos documentales adicionales \u2014 no controlados por el SGC (uno por l\u00ednea)',type:'lines'},
+    {k:'procedimiento',h:'Procedimiento',type:'procsug'}],
+    draft,(d)=>{const i=arr.findIndex(x=>x.id===d.id);arr[i]=d;save();closeOverlay('overlayGD');renderTRD();toast('Retenci\u00f3n actualizada');});
+}
+
+/* ---- TVD: fondos acumulados (entrada manual) ---- */
+function tvdFields(){return [
+  {k:'dependenciaId',h:'Dependencia / Oficina productora',type:'select',options:depOptions()},
+  {k:'nivel',h:'Nivel',type:'select',options:[{id:'serie',nombre:'Serie'},{id:'subserie',nombre:'Subserie'}]},
+  {k:'codigo',h:'C\u00f3digo',type:'text'},
+  {k:'serie',h:'Series y subseries documentales',type:'textarea'},
+  {k:'fechaIni',h:'Fecha inicial',type:'text'},
+  {k:'fechaFin',h:'Fecha final',type:'text'},
+  {k:'ac',h:'Retenci\u00f3n Archivo Central (a\u00f1os)',type:'num'},
+  {k:'disp',h:'Disposici\u00f3n final',type:'disp'},
+  {k:'procedimiento',h:'Procedimiento',type:'procsug'}];}
+function renderTVD(){
+  const cont=document.getElementById('gdContent');
+  const deps=db.gestion.dependencias, data=db.gestion.tvd;
+  const byCode=(a,b)=>String(a.codigo||'').localeCompare(String(b.codigo||''),undefined,{numeric:true});
+  let intro=`<div class="card" style="margin-bottom:16px"><div class="toolbar">
+      <div><strong style="font-size:14px">Tablas de Valoración Documental</strong><div style="color:var(--muted);font-size:12px;margin-top:2px">Para fondos documentales acumulados (documentación histórica anterior a la TRD). Una tabla por oficina productora; usa los botones del encabezado de cada cuadro para agregar series o subseries.</div></div>
+    </div></div>`;
+  if(!deps.length){
+    cont.innerHTML=intro+`<div class="card"><div class="empty"><div class="big">Sin dependencias</div>Primero crea las dependencias (oficinas productoras) arriba.</div></div>`;
+    return;
+  }
+  const grupos=deps.map(d=>({dep:d,rows:data.filter(r=>r.dependenciaId===d.id).slice().sort(byCode)}));
+  const sinDep=data.filter(r=>!r.dependenciaId||!deps.find(d=>d.id===r.dependenciaId)).slice().sort(byCode);
+  if(sinDep.length)grupos.push({dep:null,rows:sinDep});
+
+  const secs=grupos.map(g=>{
+    const depId=g.dep?g.dep.id:'';
+    const id='gdsec-tvd-'+(g.dep?g.dep.id:'sindep');
+    const label=g.dep?depName(g.dep.id):'(sin dependencia)';
+    const filas=g.rows.length? g.rows.map(r=>{
+      const isSub=r.nivel==='subserie';
+      return `<tr class="row-link${isSub?' ver-row':''}" onclick="editTVD('${r.id}')">
+        <td>${isSub?'↳ ':''}<span class="codecell">${esc(r.codigo||'—')}</span></td>
+        <td>${esc(r.serie||'')} <span style="color:var(--muted-2);font-size:11px">(${isSub?'subserie':'serie'})</span></td>
+        <td>${esc(r.fechaIni||'')} – ${esc(r.fechaFin||'')}</td>
+        <td style="text-align:center">${r.ac!==''&&r.ac!=null?esc(r.ac):'—'}</td>
+        <td>${dispTags(r.disp)}</td>
+        <td style="font-size:11.5px">${esc(r.procedimiento||'')}</td>
+        <td style="text-align:right" onclick="event.stopPropagation()"><button class="btn danger sm" onclick="delTVD('${r.id}')">Eliminar</button></td>
+      </tr>`;
+    }).join('') : `<tr><td colspan="7"><div class="empty" style="padding:22px">Sin series/subseries en esta oficina. Usa los botones del encabezado.</div></td></tr>`;
+    const html=`<div class="trd-section" id="${id}">
+      <div class="trd-head" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+        <div>
+          <div><span class="trd-lbl">ENTIDAD PRODUCTORA:</span> ${esc(ENTIDAD_PRODUCTORA)}</div>
+          <div><span class="trd-lbl">OFICINA PRODUCTORA:</span> ${g.dep?esc(depName(g.dep.id)):'(sin dependencia asignada)'}</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-shrink:0">
+          <button class="btn sm" onclick="nuevoTVD('${depId}','serie')">＋ Nueva serie</button>
+          <button class="btn sm" onclick="nuevoTVD('${depId}','subserie')">＋ Nueva subserie</button>
+        </div>
+      </div>
+      <div class="card"><div style="overflow-x:auto"><table>
+        <thead><tr><th style="width:110px">Código</th><th>Series y subseries</th><th>Fechas extremas</th><th style="width:60px">A. Central</th><th>Disp.</th><th>Procedimiento</th><th style="text-align:right">Acción</th></tr></thead>
+        <tbody>${filas}</tbody></table></div></div>
+    </div>`;
+    return {id,label,depKey:(g.dep?g.dep.id:'sindep'),html};
+  });
+  cont.innerHTML=intro+gdElegirSeccion('tvd',secs);
+}
+
+function nuevoTVD(depId,nivel){const d={id:uid(),disp:{},dependenciaId:depId||'',nivel:nivel||'serie'};tvdFields().forEach(f=>{if(!(f.k in d))d[f.k]=f.type==='disp'?{}:'';});gdModal('Nueva '+(nivel==='subserie'?'subserie':'serie')+' \u00b7 TVD','Fondo documental acumulado',tvdFields(),d,guardarTVD);}
+function editTVD(id){const r=db.gestion.tvd.find(x=>x.id===id);gdModal('Editar registro \u00b7 TVD','',tvdFields(),JSON.parse(JSON.stringify(r)),guardarTVD,()=>delTVD(id,true));}
+function guardarTVD(d){const a=db.gestion.tvd;const i=a.findIndex(x=>x.id===d.id);i>=0?a[i]=d:a.push(d);save();closeOverlay('overlayGD');renderTVD();toast('Registro guardado');}
+function delTVD(id,fromModal){pedirConfirmacion('Eliminar registro','\u00bfEliminar este registro de la TVD?\n\nPodr\u00e1s revertirlo con \u201cDeshacer\u201d.',()=>{db.gestion.tvd=db.gestion.tvd.filter(x=>x.id!==id);save();if(fromModal)closeOverlay('overlayGD');renderTVD();toast('Registro eliminado');},'Eliminar');}
+
+/* ---- Exportaci\u00f3n del instrumento activo ---- */
+function gdFilas(){
+  if(gdActive==='ccd'){
+    const rows=[];
+    db.gestion.series.forEach(s=>{
+      const subs=db.gestion.subseries.filter(ss=>ss.serieId===s.id);
+      if(subs.length)subs.forEach(ss=>rows.push({'Dependencia':depName(s.dependenciaId),'C\u00f3d. serie':s.codigo||'','Serie':s.nombre||'','C\u00f3d. subserie':ss.codigo||'','Subserie':ss.nombre||''}));
+      else rows.push({'Dependencia':depName(s.dependenciaId),'C\u00f3d. serie':s.codigo||'','Serie':s.nombre||'','C\u00f3d. subserie':'','Subserie':''});
+    });
+    return rows;
+  }
+  if(gdActive==='trd'){
+    const rows=[];
+    db.gestion.series.forEach(s=>{
+      rows.push({'Dependencia':depName(s.dependenciaId),'C\u00f3digo':s.codigo||'','Serie / Subserie':s.nombre||'','Nivel':'Serie','Tipos documentales':tiposPlano(tiposDeSerie(s.id)),'A. Gesti\u00f3n (a\u00f1os)':s.ag||'','A. Central (a\u00f1os)':s.ac||'','Disposici\u00f3n final':dispText(s.disp),'Procedimiento':s.procedimiento||''});
+      db.gestion.subseries.filter(ss=>ss.serieId===s.id).forEach(ss=>{
+        rows.push({'Dependencia':depName(s.dependenciaId),'C\u00f3digo':ss.codigo||'','Serie / Subserie':ss.nombre||'','Nivel':'Subserie','Tipos documentales':tiposPlano(tiposDeSubserie(ss.id)),'A. Gesti\u00f3n (a\u00f1os)':ss.ag||'','A. Central (a\u00f1os)':ss.ac||'','Disposici\u00f3n final':dispText(ss.disp),'Procedimiento':ss.procedimiento||''});
+      });
+    });
+    return rows;
+  }
+  return db.gestion.tvd.map(r=>({'Dependencia':depName(r.dependenciaId),'Nivel':r.nivel==='subserie'?'Subserie':'Serie','C\u00f3digo':r.codigo||'','Series y subseries':r.serie||'','Fecha inicial':r.fechaIni||'','Fecha final':r.fechaFin||'','Ret. A. Central (a\u00f1os)':r.ac||'','Disposici\u00f3n final':dispText(r.disp),'Procedimiento':r.procedimiento||''}));
+}
+function trdRowsDe(series){
+  const rows=[];
+  series.forEach(s=>{
+    rows.push({'Código':s.codigo||'','Serie / Subserie':s.nombre||'','Nivel':'Serie','Tipos documentales':tiposPlano(tiposDeSerie(s.id),s.tiposManual),'Soporte':s.soporte||'','A. Gestión (años)':s.ag||'','A. Central (años)':s.ac||'','Disposición final':dispText(s.disp),'Procedimiento':s.procedimiento||''});
+    db.gestion.subseries.filter(ss=>ss.serieId===s.id).forEach(ss=>{
+      rows.push({'Código':ss.codigo||'','Serie / Subserie':ss.nombre||'','Nivel':'Subserie','Tipos documentales':tiposPlano(tiposDeSubserie(ss.id),ss.tiposManual),'Soporte':ss.soporte||'','A. Gestión (años)':ss.ag||'','A. Central (años)':ss.ac||'','Disposición final':dispText(ss.disp),'Procedimiento':ss.procedimiento||''});
+    });
+  });
+  return rows;
+}
+function gdExportExcel(){
+  toast('Generando hoja de cálculo…');
+  loadXLSX().then(XLSX=>{
+    const wb=XLSX.utils.book_new();
+    if(gdActive==='trd'){
+      const deps=db.gestion.dependencias, series=db.gestion.series;
+      const grupos=deps.map(d=>({dep:d,series:series.filter(s=>s.dependenciaId===d.id)}));
+      const sinDep=series.filter(s=>!s.dependenciaId||!deps.find(d=>d.id===s.dependenciaId));
+      if(sinDep.length)grupos.push({dep:null,series:sinDep});
+      const conContenido=grupos.filter(g=>g.series.length);
+      if(!conContenido.length){toast('No hay series para exportar');return;}
+      const usados={};
+      conContenido.forEach(g=>{
+        const rows=trdRowsDe(g.series);
+        const ws=XLSX.utils.aoa_to_sheet([['ENTIDAD PRODUCTORA:',ENTIDAD_PRODUCTORA],['OFICINA PRODUCTORA:',g.dep?depName(g.dep.id):'(sin dependencia)'],[]]);
+        XLSX.utils.sheet_add_json(ws,rows,{origin:'A4'});
+        ws['!cols']=Object.keys(rows[0]).map(k=>({wch:Math.min(50,Math.max(12,k.length+2))}));
+        let nombre=(g.dep?((g.dep.codigo?g.dep.codigo+' ':'')+g.dep.nombre):'Sin dependencia').replace(/[\\\/?*\[\]:]/g,' ').slice(0,31);
+        let base=nombre,n=1;while(usados[nombre]){nombre=(base.slice(0,27)+' '+(++n)).slice(0,31);}usados[nombre]=1;
+        XLSX.utils.book_append_sheet(wb,ws,nombre);
+      });
+      XLSX.writeFile(wb,`TRD_${new Date().toISOString().slice(0,10)}.xlsx`);
+      toast('TRD exportada ('+conContenido.length+' oficina(s))');
+      return;
+    }
+    const rows=gdFilas();
+    if(!rows.length){toast('No hay registros para exportar');return;}
+    const ws=XLSX.utils.json_to_sheet(rows);
+    ws['!cols']=Object.keys(rows[0]).map(k=>({wch:Math.min(50,Math.max(12,k.length+2))}));
+    XLSX.utils.book_append_sheet(wb,ws,gdActive.toUpperCase());
+    XLSX.writeFile(wb,`${gdActive.toUpperCase()}_${new Date().toISOString().slice(0,10)}.xlsx`);
+    toast('Hoja de cálculo descargada ('+rows.length+' filas)');
+  }).catch(()=>{
+    const rows=gdFilas();
+    if(!rows.length){toast('No hay registros para exportar');return;}
+    const cols=Object.keys(rows[0]);const sep=';';
+    const cell=v=>{v=v==null?'':String(v);return /[";\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+    const csv=[cols.map(cell).join(sep)].concat(rows.map(r=>cols.map(c=>cell(r[c])).join(sep))).join('\r\n');
+    descargarBlob(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'}),`${gdActive.toUpperCase()}_${new Date().toISOString().slice(0,10)}.csv`);
+    toast('CSV descargado ('+rows.length+' filas)');
+  });
+}
+
+
+/* ============================================================
+   LISTADOS MAESTROS
+   ============================================================ */
+function fillListFilters(){
+  // Estados
+  ['filterDocEstado','filterRegEstado'].forEach(id=>{
+    const sel=document.getElementById(id);if(!sel)return;const cur=sel.value;
+    sel.innerHTML='<option value="">Todos los estados</option>'+ESTADOS.map(e=>`<option value="${e.key}">${esc(e.nombre)}</option>`).join('');
+    sel.value=cur;
+  });
+  // Procesos
+  ['filterDocProceso','filterRegProceso'].forEach(id=>{
+    const sel=document.getElementById(id);if(!sel)return;const cur=sel.value;
+    sel.innerHTML='<option value="">Todos los procesos</option>'+db.config.procesos.map(p=>`<option value="${p.id}">${esc(p.nombre)}</option>`).join('');
+    sel.value=cur;
+  });
+  // Subprocesos
+  ['filterDocSubproceso','filterRegSubproceso'].forEach(id=>{
+    const sel=document.getElementById(id);if(!sel)return;const cur=sel.value;
+    sel.innerHTML='<option value="">Todos los subprocesos</option>'+db.config.subprocesos.map(s=>`<option value="${s.id}">${esc(s.nombre)}</option>`).join('');
+    sel.value=cur;
+  });
+}
+
+function renderLista(tipo){
+  fillListFilters();
+  const data = tipo==='documento'?db.documentos:db.registros;
+  const tbody = document.getElementById(tipo==='documento'?'tbodyDoc':'tbodyReg');
+  const pre = tipo==='documento'?'Doc':'Reg';
+  const q = (document.getElementById('search'+pre).value||'').toLowerCase();
+  const fEstado = document.getElementById('filter'+pre+'Estado').value;
+  const fProc = document.getElementById('filter'+pre+'Proceso').value;
+  const fSub = document.getElementById('filter'+pre+'Subproceso').value;
+  let rows = data.filter(d=>{
+    const hit = !q || (d.codigo||'').toLowerCase().includes(q) || (d.nombre||'').toLowerCase().includes(q);
+    const eOk = !fEstado || d.estado===fEstado;
+    const pOk = !fProc || d.proceso===fProc;
+    const sOk = !fSub || d.subproceso===fSub;
+    return hit && eOk && pOk && sOk;
+  });
+  if(!rows.length){
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty"><div class="big">Sin ${tipo==='documento'?'documentos':'formatos'}</div>Usa el botón “Nuevo” para crear el primero.</div></td></tr>`;
+    return;
+  }
+  // Agrupar por código; dentro de cada grupo, versión más reciente primero
+  const groups={};
+  rows.forEach(d=>{const k=d.codigo||'(sin código)';(groups[k]=groups[k]||[]).push(d);});
+  const keys=Object.keys(groups).sort((a,b)=>a.localeCompare(b));
+  let html='';
+  keys.forEach(k=>{
+    const vers=groups[k].sort((a,b)=>(parseInt(b.version,10)||0)-(parseInt(a.version,10)||0));
+    const multi=vers.length>1;
+    if(multi){
+      const latest=vers[0];
+      html+=`<tr class="group-row"><td colspan="6">
+        <span class="codecell">${esc(k)}</span> · ${esc(latest.nombre||'(sin nombre)')}
+        <span class="grp-count">${vers.length} versiones</span>
+      </td></tr>`;
+    }
+    vers.forEach(d=>{
+      html+=`<tr class="row-link${multi?' ver-row':''}" onclick="abrirFicha('${tipo}','${d.id}')">
+        <td>${multi?'↳ ':''}<span class="codecell"${multi?' style="opacity:.7"':''}>${esc(d.codigo||'—')}</span></td>
+        <td>${esc(d.nombre||'(sin nombre)')}</td>
+        <td>v${esc(d.version||'1')}</td>
+        <td>${badge(d.estado)}</td>
+        <td>${d.publicado?'<span class="pub-yes">Sí</span>':'<span class="pub-no">No</span>'}</td>
+        <td style="text-align:right" onclick="event.stopPropagation()">
+          ${d.link?`<a class="btn sm" href="${esc(d.link)}" target="_blank" rel="noopener">Abrir ↗</a>`:'<span class="pub-no" style="font-size:12px">sin link</span>'}
+        </td>
+      </tr>`;
+    });
+  });
+  tbody.innerHTML=html;
+}
+function renderDocumentos(){renderLista('documento');}
+function renderRegistros(){renderLista('registro');}
+
+/* ============================================================
+   APROBACIONES
+   ============================================================ */
+function renderAprobaciones(){
+  const tbody=document.getElementById('tbodyAppr');
+  const items=[
+    ...db.documentos.map(d=>({...d,_tipo:'documento'})),
+    ...db.registros.map(d=>({...d,_tipo:'registro'})),
+  ].filter(d=>d.estado!=='vigente'&&d.estado!=='publicado'&&d.estado!=='obsoleto');
+  if(!items.length){
+    tbody.innerHTML=`<tr><td colspan="7"><div class="empty"><div class="big">Nada pendiente</div>Todos los documentos están vigentes.</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML=items.map(d=>`
+    <tr>
+      <td><a href="javascript:void(0)" onclick="abrirFicha('${d._tipo}','${d.id}')" class="codecell" title="Ver ficha" style="text-decoration:none;cursor:pointer">${esc(d.codigo||'—')}</a></td>
+      <td>${d.link?`<a href="${esc(d.link)}" target="_blank" rel="noopener" title="Abrir documento original" style="color:var(--brand);font-weight:600;text-decoration:none">${esc(d.nombre||'(sin nombre)')} ↗</a>`:`<span title="Sin link al original">${esc(d.nombre||'(sin nombre)')}</span>`}</td>
+      <td>v${esc(d.version||'1')}</td>
+      <td>${d._tipo==='documento'?'Documento':'Formato'}</td>
+      <td>${esc(nombreProceso(d.proceso)||'—')}</td>
+      <td>${badge(d.estado)}</td>
+      <td style="text-align:right"><div class="appr-actions" style="justify-content:flex-end">${apprButtons(d)}</div></td>
+    </tr>`).join('');
+}
+function apprButtons(d){
+  const t=d._tipo;const id=d.id;
+  if(d.estado==='elaboracion')
+    return `<button class="btn ok sm" onclick="flujo('${t}','${id}','elaborado')">Marcar elaborado</button>`;
+  if(d.estado==='revision')
+    return `<button class="btn ok sm" onclick="flujo('${t}','${id}','revisado')">Revisado</button>
+            <button class="btn danger sm" onclick="flujo('${t}','${id}','rechazar')">Rechazar</button>`;
+  if(d.estado==='aprobacion')
+    return `<button class="btn ok sm" onclick="flujo('${t}','${id}','aprobado')">Aprobado</button>
+            <button class="btn danger sm" onclick="flujo('${t}','${id}','rechazar')">Rechazar</button>`;
+  return '—';
+}
+function flujo(tipo,id,accion){
+  const item=find(tipo,id);if(!item)return;
+  if(accion==='rechazar'){
+    // Devuelve al paso anterior y elimina la firma/registro del paso al que regresa
+    if(item.estado==='aprobacion'){item.estado='revision';item.reviso=null;item.aprobo=null;
+      toast('Rechazado → vuelve a revisión (firma de revisión eliminada)');}
+    else if(item.estado==='revision'){item.estado='elaboracion';item.elaboro=null;item.reviso=null;item.aprobo=null;
+      toast('Rechazado → vuelve a elaboración (firma de elaboración eliminada)');}
+    save();renderAprobaciones();
+    return;
+  }
+  // elaborado / revisado / aprobado: la fecha y hora se registran manualmente
+  const rolTxt = accion==='elaborado'?'elaboración':accion==='revisado'?'revisión':'aprobación';
+  pedirFechaHora('Registrar '+rolTxt,(fecha,hora)=>{
+    const ts={fecha,hora};
+    if(accion==='elaborado'){item.elaboro=firmaDe(getUser(item.responsableElaborar),ts);item.estado='revision';toast('Elaboración registrada → pasa a revisión');}
+    else if(accion==='revisado'){item.reviso=firmaDe(getUser(item.responsableRevisar),ts);item.estado='aprobacion';toast('Revisión registrada → pasa a aprobación');}
+    else if(accion==='aprobado'){
+      item.aprobo=firmaDe(getUser(item.responsableAprobar),ts);item.estado='vigente';
+      // La versión anterior (mismo código, otra ficha vigente/publicada) pasa a obsoleta
+      let obsoletadas=0;
+      if(item.codigo){
+        const arr=tipo==='documento'?db.documentos:db.registros;
+        arr.forEach(o=>{
+          if(o.id!==item.id && o.codigo===item.codigo && (o.estado==='vigente'||o.estado==='publicado')){
+            o.estado='obsoleto';o.publicado=false;obsoletadas++;
+          }
+        });
+      }
+      toast(obsoletadas?`Aprobado → vigente. ${obsoletadas} versión(es) anterior(es) pasó a obsoleta.`:'Aprobado → documento vigente');
+    }
+    save();renderAprobaciones();
+  });
+}
+function firmaDe(u,ts){
+  return {nombre:u?u.nombre:'(responsable no asignado)',cargo:u?u.cargo:'',firma:u?(u.firma||''):'',firmaImg:u?(u.firmaImg||''):'',fecha:ts.fecha,hora:ts.hora};
+}
+/* Pide fecha y hora manualmente antes de registrar una firma */
+function pedirFechaHora(titulo,cb){
+  const d=new Date();
+  document.getElementById('fechaTitle').textContent=titulo;
+  document.getElementById('fh_fecha').value=d.toISOString().slice(0,10);
+  document.getElementById('fh_hora').value=d.toTimeString().slice(0,5);
+  const btn=document.getElementById('fh_confirm');
+  btn.onclick=()=>{
+    const fv=document.getElementById('fh_fecha').value;
+    const hv=document.getElementById('fh_hora').value;
+    if(!fv||!hv){toast('Indica fecha y hora');return;}
+    const [y,m,dd]=fv.split('-');
+    closeOverlay('overlayFecha');
+    cb(`${dd}/${m}/${y}`,hv);
+  };
+  document.getElementById('overlayFecha').classList.add('open');
+}
+function find(tipo,id){const arr=tipo==='documento'?db.documentos:db.registros;return arr.find(x=>x.id===id);}
+
+/* Convierte un archivo de imagen en dataURL redimensionado (firma) */
+let pendingFirma=null;
+function fileToFirma(file,maxW=320){
+  return new Promise((res,rej)=>{
+    if(!file||!file.type.startsWith('image/')){rej('no-img');return;}
+    const r=new FileReader();
+    r.onload=()=>{
+      const img=new Image();
+      img.onload=()=>{
+        const scale=Math.min(1,maxW/img.width);
+        const w=Math.round(img.width*scale),h=Math.round(img.height*scale);
+        const c=document.createElement('canvas');c.width=w;c.height=h;
+        c.getContext('2d').drawImage(img,0,0,w,h);
+        res(c.toDataURL('image/png'));
+      };
+      img.onerror=()=>rej('img-err');img.src=r.result;
+    };
+    r.onerror=()=>rej('read-err');r.readAsDataURL(file);
+  });
+}
+
+/* ============================================================
+   FICHA (documento / registro)
+   ============================================================ */
+let fichaCtx={tipo:null,id:null,draft:null};
+
+function nuevoItem(tipo){
+  return {id:uid(),tipo,codigo:'',nombre:'',version:'1',proceso:'',subproceso:'',estado:'elaboracion',
+    publicado:false,fechaVigencia:'',origen:'',clasificacion:'',
+    clasificacionArchivistica:[],
+    controlCambios:[],correoSolicitud:'',correoDivulgacion:'',correoEliminacion:'',
+    responsableElaborar:'',responsableRevisar:'',responsableAprobar:'',
+    elaboro:null,reviso:null,aprobo:null,link:'',linkPublicado:'',
+    // sólo registros:
+    cargoDiligenciar:'',cargoArchivar:'',lugarArchivo:'',recuperacion:'',
+    tiempoGestion:'',disposicionFinal:'',tiempoDisposicion:''};
+}
+
+function abrirFicha(tipo,id){
+  const base = id? JSON.parse(JSON.stringify(find(tipo,id))) : nuevoItem(tipo);
+  fichaCtx={tipo,id,draft:base};
+  document.getElementById('fichaTitle').textContent = (id?'Ficha de ':'Nuevo ')+(tipo==='documento'?'documento':'formato');
+  document.getElementById('fichaSub').textContent = id? `${base.codigo||'sin código'} · v${base.version||'1'}` : 'Complete los campos y guarde la ficha.';
+  document.getElementById('fichaBody').innerHTML = fichaHTML(base,tipo);
+  document.getElementById('fichaActions').innerHTML = fichaFooterActions(base,id);
+  setFichaEstadoBadge(base.estado);
+  document.getElementById('overlayFicha').classList.add('open');
+}
+function setFichaEstadoBadge(estadoKey){
+  const el=document.getElementById('fichaEstado');if(el)el.innerHTML=badge(estadoKey);
+}
+function onEstadoFichaChange(){setFichaEstadoBadge(document.getElementById('f_estado').value);}
+function cerrarFicha(){document.getElementById('overlayFicha').classList.remove('open');}
+function closeOverlay(idov){document.getElementById(idov).classList.remove('open');}
+
+/* ---------- Exportar ficha a PDF (documento imprimible) ---------- */
+const ESTADO_HEX={gris:['#5b6573','#f1f3f6','#e2e6ec'],amarillo:['#9a6700','#fff6e0','#f4e3b3'],azul:['#1d4ed8','#e7f0ff','#cdddfb'],verde:['#0a7d4d','#e3f6ec','#c2ead4'],rojo:['#b3261e','#fdeceb','#f4cfcc']};
+function cfgName(listKey,id){const it=(db.config[listKey]||[]).find(x=>x.id===id);return it?it.nombre:'';}
+function userName(id){const u=getUser(id);return u?`${esc(u.nombre)}${u.cargo?' · '+esc(u.cargo):''}`:'—';}
+function fechaHoy(){const d=new Date();return d.toLocaleDateString('es-CO')+' '+d.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});}
+function pdfBadge(estadoKey){
+  const e=ESTADO[estadoKey]||ESTADO.elaboracion;const c=ESTADO_HEX[e.color]||ESTADO_HEX.gris;
+  return `<span style="display:inline-block;padding:4px 12px;border-radius:20px;font-weight:700;font-size:12px;color:${c[0]};background:${c[1]};border:1px solid ${c[2]}">${esc(e.nombre)}</span>`;
+}
+function pdfRow(label,value){return `<div class="row"><div class="lbl">${label}</div><div class="val">${value||'—'}</div></div>`;}
+function pdfSign(rol,s){
+  if(!s||!s.nombre)return `<div class="sign"><div class="srol">${rol}</div><div class="snone">Pendiente</div></div>`;
+  return `<div class="sign"><div class="srol">${rol}</div>
+    <div class="swho">${esc(s.nombre)}</div>
+    <div class="smeta">${esc(s.cargo||'')}</div>
+    ${s.firmaImg?`<img class="simg" src="${s.firmaImg}">`:(s.firma?`<div class="smeta">Firma: ${esc(s.firma)}</div>`:'')}
+    <div class="smeta">${esc(s.fecha||'')} ${esc(s.hora||'')}</div></div>`;
+}
+/* ---------- Exportar ficha a PDF (descarga directa con jsPDF) ---------- */
+let _jspdfLoading=null;
+function loadJsPDF(){
+  if(window.jspdf&&window.jspdf.jsPDF)return Promise.resolve(window.jspdf.jsPDF);
+  if(_jspdfLoading)return _jspdfLoading;
+  _jspdfLoading=new Promise((res,rej)=>{
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    s.onload=()=>(window.jspdf&&window.jspdf.jsPDF)?res(window.jspdf.jsPDF):rej(new Error('jsPDF no disponible'));
+    s.onerror=()=>rej(new Error('No se pudo cargar jsPDF'));
+    document.head.appendChild(s);
+  });
+  return _jspdfLoading;
+}
+function hexRgb(h){return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];}
+
+/* ---------- Exportar listado a hoja de cálculo (xlsx con respaldo CSV) ---------- */
+function userNamePlain(id){const u=getUser(id);return u?`${u.nombre}${u.cargo?' · '+u.cargo:''}`:'';}
+function descargarBlob(blob,nombre){
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');
+  a.href=url;a.download=nombre;a.style.display='none';document.body.appendChild(a);a.click();
+  setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},150);
+}
+function filasParaExcel(tipo){
+  const arr=tipo==='documento'?db.documentos:db.registros;
+  const esReg=tipo==='registro';
+  const firmaTxt=s=>(s&&s.nombre)?`${s.nombre}${s.cargo?' ('+s.cargo+')':''} - ${s.fecha||''} ${s.hora||''}`.trim():'';
+  return arr.slice().sort((a,b)=>(a.codigo||'').localeCompare(b.codigo||'')||((parseInt(a.version,10)||0)-(parseInt(b.version,10)||0))).map(d=>{
+    const row={
+      'Código':d.codigo||'',
+      'Nombre':d.nombre||'',
+      'Versión':d.version||'',
+      'Estado':(ESTADO[d.estado]||{}).nombre||d.estado||'',
+      'Publicado':d.publicado?'Sí':'No',
+      'Tipo de documento':cfgName('tiposDocumento',d.tipoDoc),
+      'Origen':cfgName('origenes',d.origen),
+      'Proceso':nombreProceso(d.proceso),
+      'Subproceso':nombreSub(d.subproceso),
+      'Clasificación':cfgName('clasificaciones',d.clasificacion),
+      'Series documentales':(d.clasificacionArchivistica||[]).map(c=>serieLabel(c.serieId)).filter(Boolean).join(' | '),
+      'Subseries documentales':(d.clasificacionArchivistica||[]).map(c=>subserieLabel(c.subserieId)).filter(Boolean).join(' | '),
+      'Fecha de vigencia':d.fechaVigencia||'',
+      'Responsable elaborar':userNamePlain(d.responsableElaborar),
+      'Responsable revisar':userNamePlain(d.responsableRevisar),
+      'Responsable aprobar':userNamePlain(d.responsableAprobar),
+      'Elaboró':firmaTxt(d.elaboro),
+      'Revisó':firmaTxt(d.reviso),
+      'Aprobó':firmaTxt(d.aprobo),
+      'Link correo solicitud':d.correoSolicitud||'',
+      'Link correo divulgación':d.correoDivulgacion||'',
+      'Link correo eliminación':d.correoEliminacion||'',
+      'Link documento original':d.link||'',
+      'Link documento publicado':d.linkPublicado||''
+    };
+    if(esReg){
+      row['Cargo resp. diligenciar']=d.cargoDiligenciar||'';
+      row['Cargo resp. archivar']=d.cargoArchivar||'';
+      row['Lugar de archivo']=d.lugarArchivo||'';
+      row['Recuperación']=cfgName('recuperaciones',d.recuperacion);
+      row['Tiempo archivo de gestión']=d.tiempoGestion||'';
+      row['Disposición final']=cfgName('disposiciones',d.disposicionFinal);
+      row['Tiempo en disposición final']=d.tiempoDisposicion||'';
+    }
+    row['Control de cambios']=(d.controlCambios||[]).map(c=>`v${c.version} (${c.fecha||''}): ${c.descripcion||''}`).join(' | ');
+    return row;
+  });
+}
+let _xlsxLoading=null;
+function loadXLSX(){
+  if(window.XLSX)return Promise.resolve(window.XLSX);
+  if(_xlsxLoading)return _xlsxLoading;
+  _xlsxLoading=new Promise((res,rej)=>{
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload=()=>window.XLSX?res(window.XLSX):rej(new Error('XLSX no disponible'));
+    s.onerror=()=>rej(new Error('No se pudo cargar XLSX'));
+    document.head.appendChild(s);
+  });
+  return _xlsxLoading;
+}
+function exportarListaExcel(tipo){
+  const rows=filasParaExcel(tipo);
+  if(!rows.length){toast('No hay registros para exportar');return;}
+  toast('Generando hoja de cálculo…');
+  loadXLSX().then(XLSX=>{
+    const ws=XLSX.utils.json_to_sheet(rows);
+    ws['!cols']=Object.keys(rows[0]).map(k=>({wch:Math.min(48,Math.max(12,k.length+2))}));
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,tipo==='documento'?'Documentos':'Formatos');
+    XLSX.writeFile(wb,`Listado_${tipo==='documento'?'documentos':'formatos'}_${new Date().toISOString().slice(0,10)}.xlsx`);
+    toast('Hoja de cálculo descargada ('+rows.length+' filas)');
+  }).catch(()=>{toast('Sin conexión: exportando como CSV.');exportarListaCSV(tipo,rows);});
+}
+function exportarListaCSV(tipo,rows){
+  rows=rows||filasParaExcel(tipo);
+  if(!rows.length){toast('No hay registros para exportar');return;}
+  const cols=Object.keys(rows[0]);
+  const sep=';'; // Excel en español usa ; como separador por defecto
+  const cell=v=>{v=v==null?'':String(v);return /[";\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+  const csv=[cols.map(cell).join(sep)].concat(rows.map(r=>cols.map(c=>cell(r[c])).join(sep))).join('\r\n');
+  descargarBlob(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'}),
+    `Listado_${tipo==='documento'?'documentos':'formatos'}_${new Date().toISOString().slice(0,10)}.csv`);
+  toast('CSV descargado ('+rows.length+' filas)');
+}
+
+function exportarFichaPDF(){
+  toast('Generando PDF…');
+  loadJsPDF().then(JsPDF=>{
+    construirPDF(JsPDF);
+  }).catch(()=>{
+    toast('Sin conexión para descarga directa: usando vista de impresión.');
+    exportarFichaPrint();
+  });
+}
+
+function construirPDF(JsPDF){
+  const d=readFicha();
+  const esRegistro=fichaCtx.tipo==='registro';
+  const doc=new JsPDF({unit:'mm',format:'a4'});
+  const M=14, PW=210, PH=297, CW=PW-2*M, GAP=8;
+  let y=M;
+  const ensure=h=>{if(y+h>PH-M){doc.addPage();y=M;}};
+  const setLbl=()=>{doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(120,128,140);};
+  const setVal=()=>{doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(27,37,51);};
+
+  function badge(x,by,key){
+    const e=ESTADO[key]||ESTADO.elaboracion;const c=ESTADO_HEX[e.color]||ESTADO_HEX.gris;
+    doc.setFont('helvetica','bold');doc.setFontSize(8);
+    const txt=e.nombre.toUpperCase();const w=doc.getTextWidth(txt)+8;
+    const fill=hexRgb(c[1]),bd=hexRgb(c[2]),tx=hexRgb(c[0]);
+    doc.setFillColor(fill[0],fill[1],fill[2]);doc.setDrawColor(bd[0],bd[1],bd[2]);
+    doc.roundedRect(x-w,by,w,6,3,3,'FD');
+    doc.setTextColor(tx[0],tx[1],tx[2]);doc.text(txt,x-w+4,by+4);
+    return w;
+  }
+  function title(t){ensure(10);doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(19,51,92);doc.text(t.toUpperCase(),M,y);y+=2;doc.setDrawColor(221,227,236);doc.setLineWidth(0.2);doc.line(M,y,M+CW,y);y+=5;}
+  function pair(l1,v1,l2,v2){
+    const colW=(CW-GAP)/2;
+    const ln1=doc.splitTextToSize(String(v1||'—'),colW);
+    const has2=l2!==null;
+    const ln2=has2?doc.splitTextToSize(String(v2||'—'),colW):[];
+    const h=Math.max(ln1.length,ln2.length)*4+6;ensure(h);
+    setLbl();doc.text(l1.toUpperCase(),M,y);if(has2)doc.text(l2.toUpperCase(),M+colW+GAP,y);
+    setVal();doc.text(ln1,M,y+4);if(has2)doc.text(ln2,M+colW+GAP,y+4);
+    y+=h;
+  }
+  function full(l,v){
+    const ln=doc.splitTextToSize(String(v||'—'),CW);const h=ln.length*4+6;ensure(h);
+    setLbl();doc.text(l.toUpperCase(),M,y);setVal();doc.text(ln,M,y+4);y+=h;
+  }
+
+  // Encabezado
+  doc.setFont('helvetica','bold');doc.setFontSize(13);doc.setTextColor(19,51,92);
+  doc.text('Gilmedica S.A.S.',M,y+4);
+  doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(100,112,130);
+  doc.text('Control documental · SGC ISO 9001',M,y+9);
+  badge(M+CW,y+1,d.estado);
+  doc.setFontSize(7.5);doc.setTextColor(100,112,130);
+  doc.text((esRegistro?'Formato / Registro':'Documento')+(d.publicado?' · Publicado':''),M+CW,y+11,{align:'right'});
+  y+=15;doc.setDrawColor(19,51,92);doc.setLineWidth(0.5);doc.line(M,y,M+CW,y);y+=7;
+
+  // Título
+  doc.setFont('helvetica','bold');doc.setFontSize(13);doc.setTextColor(27,37,51);
+  const tl=doc.splitTextToSize(`${d.codigo||'(sin código)'} · ${d.nombre||'(sin nombre)'}`,CW);
+  ensure(tl.length*6+4);doc.text(tl,M,y);y+=tl.length*6+1;
+  doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor(100,112,130);
+  doc.text(`Versión ${d.version||'1'}${d.fechaVigencia?' · Vigente desde '+d.fechaVigencia:''}`,M,y);y+=7;
+
+  // Identificación
+  title('Identificación');
+  pair('Código',d.codigo,'Versión','v'+(d.version||'1'));
+  pair('Tipo de documento',cfgName('tiposDocumento',d.tipoDoc),'Origen',cfgName('origenes',d.origen));
+  pair('Proceso',nombreProceso(d.proceso),'Subproceso',nombreSub(d.subproceso));
+  pair('Clasificación',cfgName('clasificaciones',d.clasificacion),'Publicado',d.publicado?'Sí':'No');
+
+  // Estado y vigencia
+  title('Estado y vigencia');
+  pair('Estado',(ESTADO[d.estado]||ESTADO.elaboracion).nombre,'Fecha de vigencia',d.fechaVigencia);
+  full('Link de correo de solicitud',d.correoSolicitud);
+  full('Link de correo de divulgación',d.correoDivulgacion);
+  full('Link de correo de eliminación',d.correoEliminacion);
+  full('Link al documento original',d.link);
+  full('Link al documento publicado',d.linkPublicado);
+
+  // Responsables
+  title('Responsables');
+  full('Responsable de elaborar',userName(d.responsableElaborar));
+  full('Responsable de revisar',userName(d.responsableRevisar));
+  full('Responsable de aprobar',userName(d.responsableAprobar));
+
+  // Firmas
+  title('Firmas');
+  const boxW=(CW-2*GAP)/3, boxH=34;ensure(boxH+2);
+  const firmas=[['Elaboró',d.elaboro],['Revisó',d.reviso],['Aprobó',d.aprobo]];
+  firmas.forEach((f,i)=>{
+    const bx=M+i*(boxW+GAP), s=f[1];
+    doc.setDrawColor(221,227,236);doc.setLineWidth(0.2);doc.roundedRect(bx,y,boxW,boxH,2,2,'S');
+    doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(120,128,140);
+    doc.text(f[0].toUpperCase(),bx+3,y+5);
+    if(!s||!s.nombre){
+      doc.setFont('helvetica','italic');doc.setFontSize(8.5);doc.setTextColor(138,148,163);
+      doc.text('Pendiente',bx+3,y+12);
+    }else{
+      doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor(27,37,51);
+      doc.text(doc.splitTextToSize(s.nombre,boxW-6),bx+3,y+11);
+      doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(100,112,130);
+      if(s.cargo)doc.text(doc.splitTextToSize(s.cargo,boxW-6),bx+3,y+15);
+      // imagen de firma
+      if(s.firmaImg){
+        try{
+          const p=doc.getImageProperties(s.firmaImg);
+          let w=boxW-8, h=w*p.height/p.width, maxH=12;
+          if(h>maxH){h=maxH;w=h*p.width/p.height;}
+          doc.addImage(s.firmaImg,'PNG',bx+3,y+17,w,h);
+        }catch(e){}
+      }
+      doc.setFontSize(7.5);doc.setTextColor(100,112,130);
+      doc.text(`${s.fecha||''} ${s.hora||''}`,bx+3,y+boxH-3);
+    }
+  });
+  y+=boxH+6;
+
+  // Control de registros (sólo formatos)
+  if(esRegistro){
+    title('Control de registros (retención y disposición)');
+    pair('Cargo resp. de diligenciar',d.cargoDiligenciar,'Cargo resp. de archivar',d.cargoArchivar);
+    pair('Lugar / dirección de archivo',d.lugarArchivo,'Recuperación',cfgName('recuperaciones',d.recuperacion));
+    pair('Tiempo en archivo de gestión',d.tiempoGestion,'Disposición final',cfgName('disposiciones',d.disposicionFinal));
+    full('Tiempo en disposición final',d.tiempoDisposicion);
+  }
+
+  // Control de cambios
+  title('Control de cambios');
+  const cc=d.controlCambios||[];
+  if(!cc.length){doc.setFont('helvetica','italic');doc.setFontSize(8.5);doc.setTextColor(138,148,163);ensure(6);doc.text('Sin cambios registrados.',M,y+3);y+=8;}
+  else{
+    const c1=18,c2=28,c3=CW-c1-c2;
+    ensure(7);doc.setFillColor(241,245,250);doc.rect(M,y,CW,6,'F');
+    doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(100,112,130);
+    doc.text('VERSIÓN',M+2,y+4);doc.text('FECHA',M+c1+2,y+4);doc.text('DESCRIPCIÓN',M+c1+c2+2,y+4);
+    y+=6;
+    cc.forEach(c=>{
+      const ln=doc.splitTextToSize(String(c.descripcion||''),c3-4);const h=Math.max(ln.length*4,6)+2;ensure(h);
+      doc.setDrawColor(221,227,236);doc.setLineWidth(0.1);doc.rect(M,y,CW,h,'S');
+      doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(27,37,51);
+      doc.text('v'+(c.version||''),M+2,y+4);doc.text(String(c.fecha||''),M+c1+2,y+4);doc.text(ln,M+c1+c2+2,y+4);
+      y+=h;
+    });
+  }
+
+  // Pie en todas las páginas
+  const n=doc.getNumberOfPages();
+  for(let i=1;i<=n;i++){doc.setPage(i);doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(138,148,163);
+    doc.text('Gilmedica S.A.S. — Control documental',M,PH-8);
+    doc.text(`Generado: ${fechaHoy()}   ·   Pág. ${i}/${n}`,M+CW,PH-8,{align:'right'});}
+
+  const safe=(d.codigo||'ficha').replace(/[^\w.-]+/g,'_');
+  doc.save(`Ficha_${safe}_v${d.version||'1'}.pdf`);
+  toast('PDF descargado');
+}
+
+function exportarFichaPrint(){
+  const d=readFicha();
+  const tipo=fichaCtx.tipo;
+  const esRegistro=tipo==='registro';
+  const titulo=`${esc(d.codigo||'(sin código)')} · ${esc(d.nombre||'(sin nombre)')}`;
+  const link=(u,txt)=>u?`<a href="${esc(u)}">${esc(txt||u)}</a>`:'—';
+
+  const registroBlock = esRegistro? `
+    <h3>Control de registros (retención y disposición)</h3>
+    <div class="grid">
+      ${pdfRow('Cargo responsable de diligenciar',esc(d.cargoDiligenciar))}
+      ${pdfRow('Cargo responsable de archivar',esc(d.cargoArchivar))}
+      ${pdfRow('Lugar / dirección de archivo',esc(d.lugarArchivo))}
+      ${pdfRow('Recuperación',esc(cfgName('recuperaciones',d.recuperacion)))}
+      ${pdfRow('Tiempo en archivo de gestión',esc(d.tiempoGestion))}
+      ${pdfRow('Disposición final',esc(cfgName('disposiciones',d.disposicionFinal)))}
+      ${pdfRow('Tiempo en disposición final',esc(d.tiempoDisposicion))}
+    </div>`:'';
+
+  const cambios=(d.controlCambios||[]);
+  const cambiosBlock = `
+    <h3>Control de cambios</h3>
+    ${cambios.length?`<table class="cc"><thead><tr><th>Versión</th><th>Fecha</th><th>Descripción</th></tr></thead><tbody>
+      ${cambios.map(c=>`<tr><td>v${esc(c.version)}</td><td>${esc(c.fecha)}</td><td>${esc(c.descripcion)}</td></tr>`).join('')}
+    </tbody></table>`:'<div class="empty">Sin cambios registrados.</div>'}`;
+
+  const html=`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>${titulo}</title>
+  <style>
+    *{box-sizing:border-box}
+    body{font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1b2533;margin:0;padding:28px 32px;font-size:12.5px;line-height:1.45}
+    .head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #13335c;padding-bottom:12px;margin-bottom:16px}
+    .brand{font-weight:800;font-size:15px;color:#13335c}
+    .brand small{display:block;font-weight:400;color:#647082;font-size:11px;margin-top:2px}
+    h1{font-size:16px;margin:14px 0 4px}
+    .subt{color:#647082;font-size:12px;margin-bottom:14px}
+    h3{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:#13335c;border-bottom:1px solid #dde3ec;padding-bottom:5px;margin:18px 0 10px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 24px}
+    .row{display:flex;border-bottom:1px dotted #e3e8ef;padding:4px 0}
+    .lbl{width:46%;color:#647082;font-weight:600}
+    .val{width:54%;word-break:break-word}
+    .val a{color:#1f4f86}
+    .signs{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:6px}
+    .sign{border:1px solid #dde3ec;border-radius:8px;padding:10px;min-height:90px}
+    .srol{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#647082;font-weight:700;margin-bottom:4px}
+    .swho{font-weight:700}.smeta{font-size:11px;color:#647082;margin-top:2px}
+    .snone{color:#8a94a3;font-style:italic}
+    .simg{max-height:46px;max-width:100%;display:block;margin:6px 0}
+    table.cc{width:100%;border-collapse:collapse;margin-top:4px}
+    table.cc th{background:#f1f5fa;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#647082;padding:6px 8px;border:1px solid #dde3ec}
+    table.cc td{padding:6px 8px;border:1px solid #dde3ec;vertical-align:top}
+    .empty{color:#8a94a3;font-style:italic}
+    .foot{margin-top:22px;border-top:1px solid #dde3ec;padding-top:8px;color:#8a94a3;font-size:10px;display:flex;justify-content:space-between}
+    @page{margin:14mm}
+    @media print{body{padding:0}}
+  </style></head><body>
+    <div class="head">
+      <div class="brand">Gilmedica S.A.S.<small>Control documental · SGC ISO 9001</small></div>
+      <div style="text-align:right">${pdfBadge(d.estado)}<div style="font-size:11px;color:#647082;margin-top:6px">${esRegistro?'Formato / Registro':'Documento'}${d.publicado?' · Publicado':''}</div></div>
+    </div>
+    <h1>${titulo}</h1>
+    <div class="subt">Versión ${esc(d.version||'1')}${d.fechaVigencia?' · Vigente desde '+esc(d.fechaVigencia):''}</div>
+
+    <h3>Identificación</h3>
+    <div class="grid">
+      ${pdfRow('Código',esc(d.codigo))}
+      ${pdfRow('Versión','v'+esc(d.version||'1'))}
+      ${pdfRow('Tipo de documento',esc(cfgName('tiposDocumento',d.tipoDoc)))}
+      ${pdfRow('Origen',esc(cfgName('origenes',d.origen)))}
+      ${pdfRow('Proceso',esc(nombreProceso(d.proceso)))}
+      ${pdfRow('Subproceso',esc(nombreSub(d.subproceso)))}
+      ${pdfRow('Clasificación',esc(cfgName('clasificaciones',d.clasificacion)))}
+      ${pdfRow('Publicado',d.publicado?'Sí':'No')}
+    </div>
+
+    <h3>Estado y vigencia</h3>
+    <div class="grid">
+      ${pdfRow('Estado',pdfBadge(d.estado))}
+      ${pdfRow('Fecha de vigencia',esc(d.fechaVigencia))}
+      ${pdfRow('Link de correo de solicitud',link(d.correoSolicitud))}
+      ${pdfRow('Link de correo de divulgación',link(d.correoDivulgacion))}
+      ${pdfRow('Link de correo de eliminación',link(d.correoEliminacion))}
+      ${pdfRow('Link al documento original',link(d.link))}
+      ${pdfRow('Link al documento publicado',link(d.linkPublicado))}
+    </div>
+
+    <h3>Responsables</h3>
+    <div class="grid">
+      ${pdfRow('Responsable de elaborar',userName(d.responsableElaborar))}
+      ${pdfRow('Responsable de revisar',userName(d.responsableRevisar))}
+      ${pdfRow('Responsable de aprobar',userName(d.responsableAprobar))}
+    </div>
+
+    <h3>Firmas</h3>
+    <div class="signs">
+      ${pdfSign('Elaboró',d.elaboro)}
+      ${pdfSign('Revisó',d.reviso)}
+      ${pdfSign('Aprobó',d.aprobo)}
+    </div>
+
+    ${registroBlock}
+    ${cambiosBlock}
+
+    <div class="foot"><span>Gilmedica S.A.S. — Control documental</span><span>Generado: ${fechaHoy()}</span></div>
+  </body></html>`;
+
+  const win=window.open('','_blank');
+  if(!win){toast('El navegador bloqueó la ventana. Permite ventanas emergentes para exportar el PDF.');return;}
+  win.document.open();win.document.write(html);win.document.close();
+  win.onload=()=>{setTimeout(()=>{win.focus();win.print();},250);};
+  toast('Abriendo vista de impresión. Elige “Guardar como PDF”.');
+}
+
+function opt(list,val,placeholder){
+  return `<option value="">${placeholder}</option>`+list.map(x=>`<option value="${x.id}" ${x.id===val?'selected':''}>${esc(x.nombre)}</option>`).join('');
+}
+/* Campo de link con botón "Abrir" que abre el valor actual en nueva ventana */
+function linkRow(id,value,placeholder){
+  const v=value||'';
+  return `<div class="link-row">
+    <input type="url" id="${id}" value="${esc(v)}" placeholder="${esc(placeholder)}" oninput="syncOpenBtn('${id}')">
+    <button type="button" class="open-btn" id="${id}_open" ${v?'':'disabled'} onclick="abrirLink('${id}')">Abrir ↗</button>
+  </div>`;
+}
+function syncOpenBtn(id){const i=document.getElementById(id);const b=document.getElementById(id+'_open');if(b)b.disabled=!i.value.trim();}
+function abrirLink(id){
+  let url=(document.getElementById(id).value||'').trim();
+  if(!url){toast('Primero registra el link');return;}
+  if(!/^https?:\/\//i.test(url))url='https://'+url; // tolera links sin esquema
+  window.open(url,'_blank','noopener');
+}
+function optEstados(val){return ESTADOS.map(e=>`<option value="${e.key}" ${e.key===val?'selected':''}>${esc(e.nombre)}</option>`).join('');}
+function optUsuarios(val){return `<option value="">— sin asignar —</option>`+db.config.usuarios.map(u=>`<option value="${u.id}" ${u.id===val?'selected':''}>${esc(u.nombre)} · ${esc(u.cargo)}</option>`).join('');}
+
+function fichaHTML(d,tipo){
+  const esRegistro = tipo==='registro';
+  return `
+  <fieldset class="section"><legend>Identificación</legend>
+    <div class="fgrid three">
+      <div class="field"><label>Código <span class="req-flag">*</span></label><input id="f_codigo" value="${esc(d.codigo)}" placeholder="Ej. GC-PR-001"></div>
+      <div class="field"><label>Versión</label><input id="f_version" value="${esc(d.version)}" placeholder="1"></div>
+      <div class="field"><label>Tipo de documento</label><select id="f_tipoDoc">${opt(db.config.tiposDocumento,d.tipoDoc,'— tipo —')}</select></div>
+    </div>
+    <div class="fgrid">
+      <div class="field"><label>Nombre del ${esRegistro?'formato':'documento'} <span class="req-flag">*</span></label><input id="f_nombre" value="${esc(d.nombre)}"></div>
+      <div class="field"><label>Origen</label><select id="f_origen">${opt(db.config.origenes,d.origen,'— origen —')}</select></div>
+    </div>
+    <div class="fgrid three">
+      <div class="field"><label>Proceso</label><select id="f_proceso">${opt(db.config.procesos,d.proceso,'— proceso —')}</select></div>
+      <div class="field"><label>Subproceso</label><select id="f_subproceso">${opt(db.config.subprocesos,d.subproceso,'— subproceso —')}</select></div>
+      <div class="field"><label>Clasificación</label><select id="f_clasificacion">${opt(db.config.clasificaciones,d.clasificacion,'— clasificación —')}</select></div>
+    </div>
+  </fieldset>
+
+  <fieldset class="section"><legend>Clasificación archivística (gestión documental)</legend>
+    <div id="clasifList">${clasifRowsHTML()}</div>
+    <button type="button" class="btn sm" onclick="addClasifRow()">＋ Agregar serie / subserie</button>
+    <div style="font-size:11.5px;color:var(--muted);margin-top:8px">Puedes relacionar el documento con varias series/subseries. Aparecerá como tipo documental en cada una dentro de la Tabla de Retención.</div>
+  </fieldset>
+
+  <fieldset class="section"><legend>Estado y vigencia</legend>
+    <div class="fgrid three">
+      <div class="field"><label>Estado</label><select id="f_estado" onchange="onEstadoFichaChange()">${optEstados(d.estado)}</select></div>
+      <div class="field"><label>Publicado</label><select id="f_publicado"><option value="no" ${!d.publicado?'selected':''}>No</option><option value="si" ${d.publicado?'selected':''}>Sí</option></select></div>
+      <div class="field"><label>Fecha de vigencia</label><input type="date" id="f_fechaVigencia" value="${esc(d.fechaVigencia)}"></div>
+    </div>
+    <div class="fgrid three">
+      <div class="field"><label>Link de correo de solicitud</label>${linkRow('f_correoSolicitud',d.correoSolicitud,'https://… (correo de solicitud)')}</div>
+      <div class="field"><label>Link de correo de divulgación</label>${linkRow('f_correoDivulgacion',d.correoDivulgacion,'https://… (correo de divulgación)')}</div>
+      <div class="field"><label>Link de correo de eliminación</label>${linkRow('f_correoEliminacion',d.correoEliminacion||'','https://… (correo de eliminación)')}</div>
+    </div>
+    <div class="fgrid">
+      <div class="field"><label>Link al documento original</label>${linkRow('f_link',d.link,'https://… (Drive, SharePoint, etc.)')}</div>
+      <div class="field"><label>Link al documento publicado</label>${linkRow('f_linkPublicado',d.linkPublicado||'','https://… (versión publicada / oficial)')}</div>
+    </div>
+  </fieldset>
+
+  <fieldset class="section"><legend>Responsables</legend>
+    <div class="fgrid three">
+      <div class="field"><label>Responsable de elaborar</label><select id="f_respElaborar">${optUsuarios(d.responsableElaborar)}</select></div>
+      <div class="field"><label>Responsable de revisar</label><select id="f_respRevisar">${optUsuarios(d.responsableRevisar)}</select></div>
+      <div class="field"><label>Responsable de aprobar</label><select id="f_respAprobar">${optUsuarios(d.responsableAprobar)}</select></div>
+    </div>
+    <div class="pill-actions" style="margin-bottom:12px">
+      <button class="btn sm" type="button" onclick="solicitar('elaboracion')">✉ Solicitar elaboración</button>
+      <button class="btn sm" type="button" onclick="solicitar('revision')">✉ Solicitar revisión</button>
+      <button class="btn sm" type="button" onclick="solicitar('aprobacion')">✉ Solicitar firma / aprobación</button>
+    </div>
+  </fieldset>
+
+  <fieldset class="section"><legend>Firmas (elaboró · revisó · aprobó)</legend>
+    <div class="fgrid three">
+      ${signbox('Elaboró',d.elaboro)}
+      ${signbox('Revisó',d.reviso)}
+      ${signbox('Aprobó',d.aprobo)}
+    </div>
+  </fieldset>
+
+  ${esRegistro?`
+  <fieldset class="section"><legend>Control de registros (retención y disposición)</legend>
+    <div class="fgrid">
+      <div class="field"><label>Cargo responsable de diligenciar</label><input id="f_cargoDiligenciar" value="${esc(d.cargoDiligenciar)}"></div>
+      <div class="field"><label>Cargo responsable de archivar</label><input id="f_cargoArchivar" value="${esc(d.cargoArchivar)}"></div>
+    </div>
+    <div class="fgrid three">
+      <div class="field"><label>Lugar / dirección de archivo</label><input id="f_lugarArchivo" value="${esc(d.lugarArchivo)}"></div>
+      <div class="field"><label>Recuperación</label><select id="f_recuperacion">${opt(db.config.recuperaciones,d.recuperacion,'— recuperación —')}</select></div>
+      <div class="field"><label>Tiempo en archivo de gestión</label><input id="f_tiempoGestion" value="${esc(d.tiempoGestion)}" placeholder="Ej. 2 años"></div>
+    </div>
+    <div class="fgrid">
+      <div class="field"><label>Disposición final</label><select id="f_disposicionFinal">${opt(db.config.disposiciones,d.disposicionFinal,'— disposición —')}</select></div>
+      <div class="field"><label>Tiempo en disposición final</label><input id="f_tiempoDisposicion" value="${esc(d.tiempoDisposicion)}" placeholder="Ej. 5 años / permanente"></div>
+    </div>
+  </fieldset>`:''}
+
+  <fieldset class="section"><legend>Control de cambios</legend>
+    <div class="addrow" style="margin-bottom:12px;flex-wrap:wrap">
+      <input id="cc_version" value="${esc(d.version||'1')}" placeholder="Versión" style="max-width:80px">
+      <input type="date" id="cc_fecha" value="${todayISO()}" style="max-width:155px">
+      <input id="cc_desc" placeholder="Descripción del cambio" style="min-width:160px;flex:1">
+      <button class="btn primary sm" type="button" onclick="addCambio()">Agregar</button>
+    </div>
+    <ul class="changelog" id="fichaChangelog">${changelogHTML(d.controlCambios)}</ul>
+  </fieldset>
+  `;
+}
+
+function signbox(rol,s){
+  if(!s||!s.nombre)return `<div class="field"><label>${rol}</label><div class="signbox"><span class="none">Pendiente</span></div></div>`;
+  return `<div class="field"><label>${rol}</label><div class="signbox">
+    <div class="who">${esc(s.nombre)}</div>
+    <div class="meta">${esc(s.cargo||'')}</div>
+    ${s.firmaImg?`<img src="${s.firmaImg}" alt="firma" style="max-height:42px;margin:6px 0;display:block">`:(s.firma?`<div class="meta">Firma: ${esc(s.firma)}</div>`:'')}
+    <div class="meta">${esc(s.fecha||'')} ${esc(s.hora||'')}</div>
+  </div></div>`;
+}
+function changelogHTML(arr){
+  if(!arr||!arr.length)return '<li><span class="d" style="color:var(--muted-2)">Sin cambios registrados.</span></li>';
+  return arr.map(c=>`<li><span class="v">v${esc(c.version)}</span><span class="d">${esc(c.descripcion)}<div class="dt">${esc(c.fecha)}</div></span></li>`).join('');
+}
+function todayISO(){return new Date().toISOString().slice(0,10);}
+function addCambio(){
+  const v=document.getElementById('cc_version').value.trim();
+  const desc=document.getElementById('cc_desc').value.trim();
+  const fv=document.getElementById('cc_fecha').value;
+  if(!desc){toast('Escribe la descripción del cambio');return;}
+  if(!fv){toast('Indica la fecha del cambio');return;}
+  const [y,m,dd]=fv.split('-');
+  fichaCtx.draft.controlCambios = fichaCtx.draft.controlCambios||[];
+  fichaCtx.draft.controlCambios.unshift({version:v||fichaCtx.draft.version||'1',descripcion:desc,fecha:`${dd}/${m}/${y}`});
+  document.getElementById('fichaChangelog').innerHTML=changelogHTML(fichaCtx.draft.controlCambios);
+  document.getElementById('cc_desc').value='';
+  document.getElementById('cc_fecha').value=todayISO();
+}
+
+function readFicha(){
+  const d=fichaCtx.draft;const tipo=fichaCtx.tipo;
+  d.codigo=val('f_codigo');d.version=val('f_version')||'1';d.nombre=val('f_nombre');
+  d.tipoDoc=val('f_tipoDoc');d.origen=val('f_origen');d.proceso=val('f_proceso');d.subproceso=val('f_subproceso');
+  d.clasificacion=val('f_clasificacion');d.estado=val('f_estado');d.publicado=val('f_publicado')==='si';
+  syncClasifFromDOM();
+  d.fechaVigencia=val('f_fechaVigencia');d.correoSolicitud=val('f_correoSolicitud');d.correoDivulgacion=val('f_correoDivulgacion');
+  d.correoEliminacion=val('f_correoEliminacion');
+  d.link=val('f_link');d.linkPublicado=val('f_linkPublicado');
+  d.responsableElaborar=val('f_respElaborar');d.responsableRevisar=val('f_respRevisar');d.responsableAprobar=val('f_respAprobar');
+  if(tipo==='registro'){
+    d.cargoDiligenciar=val('f_cargoDiligenciar');d.cargoArchivar=val('f_cargoArchivar');d.lugarArchivo=val('f_lugarArchivo');
+    d.recuperacion=val('f_recuperacion');d.tiempoGestion=val('f_tiempoGestion');
+    d.disposicionFinal=val('f_disposicionFinal');d.tiempoDisposicion=val('f_tiempoDisposicion');
+  }
+  return d;
+}
+function val(id){const el=document.getElementById(id);return el?el.value.trim():'';}
+
+function guardarFicha(){
+  const d=readFicha();
+  if(!d.codigo){toast('El código es obligatorio');return;}
+  if(!d.nombre){toast('El nombre es obligatorio');return;}
+  const arr=fichaCtx.tipo==='documento'?db.documentos:db.registros;
+  const idx=arr.findIndex(x=>x.id===d.id);
+  if(idx>=0)arr[idx]=d; else arr.push(d);
+  save();cerrarFicha();
+  fichaCtx.tipo==='documento'?renderDocumentos():renderRegistros();
+  toast('Ficha guardada');
+}
+
+function fichaFooterActions(d,id){
+  if(!id)return '';
+  let html='';
+  html+=`<button class="btn sm" type="button" onclick="accionNuevaVersion()">↻ Nueva versión</button>`;
+  if(d.estado!=='obsoleto')
+    html+=`<button class="btn danger sm" type="button" onclick="accionObsoleto()">⊘ Enviar a obsoletos</button>`;
+  html+=`<button class="btn danger sm" type="button" onclick="eliminarItem()">🗑 Eliminar</button>`;
+  return html;
+}
+function accionNuevaVersion(){
+  if(!fichaCtx.id){toast('Primero guarda la ficha');return;}
+  pedirConfirmacion('Crear nueva versión',
+    'Se creará una NUEVA versión como ficha independiente. La versión actual seguirá ACTIVA y solo pasará a obsoleta cuando la nueva versión se apruebe.\n\n¿Continuar?',
+    ()=>{
+      // 1) Guarda las ediciones actuales de la versión vigente (sin cambiar su estado)
+      const actual=readFicha();
+      const arr=fichaCtx.tipo==='documento'?db.documentos:db.registros;
+      const idx=arr.findIndex(x=>x.id===actual.id);
+      if(idx>=0)arr[idx]=actual; else arr.push(actual);
+
+      // 2) Crea la nueva versión como registro nuevo (clon de la anterior, versión +1)
+      const nueva=JSON.parse(JSON.stringify(actual));
+      nueva.id=uid();
+      nueva.version=String((parseInt(actual.version,10)||1)+1);
+      nueva.estado='elaboracion';
+      nueva.publicado=false;
+      nueva.elaboro=null;nueva.reviso=null;nueva.aprobo=null;
+      nueva.controlCambios=(actual.controlCambios||[]).slice(); // histórico conservado
+      arr.push(nueva);
+      save();
+
+      // 3) Abre la ficha de la nueva versión para diligenciar el control de cambios
+      fichaCtx={tipo:fichaCtx.tipo,id:nueva.id,draft:JSON.parse(JSON.stringify(nueva))};
+      document.getElementById('fichaTitle').textContent='Nueva versión · '+(fichaCtx.tipo==='documento'?'documento':'formato');
+      document.getElementById('fichaSub').textContent=`${nueva.codigo||'sin código'} · v${nueva.version} · diligencia el control de cambios`;
+      document.getElementById('fichaBody').innerHTML=fichaHTML(nueva,fichaCtx.tipo);
+      document.getElementById('fichaActions').innerHTML=fichaFooterActions(nueva,fichaCtx.id);
+      setFichaEstadoBadge(nueva.estado);
+      fichaCtx.tipo==='documento'?renderDocumentos():renderRegistros();
+      toast('Versión v'+nueva.version+' creada. La anterior sigue activa hasta que apruebes la nueva.');
+    },'Crear versión');
+}
+function accionObsoleto(){
+  const d=readFicha();d.estado='obsoleto';d.publicado=false;fichaCtx.draft=d;
+  document.getElementById('f_estado').value='obsoleto';
+  document.getElementById('f_publicado').value='no';
+  setFichaEstadoBadge('obsoleto');
+  toast('Marcado como obsoleto (recuerda guardar)');
+}
+function eliminarItem(){
+  pedirConfirmacion('Eliminar ficha','¿Eliminar definitivamente esta ficha?\n\nPodrás revertirlo con “Deshacer”.',()=>{
+    const arr=fichaCtx.tipo==='documento'?db.documentos:db.registros;
+    const idx=arr.findIndex(x=>x.id===fichaCtx.draft.id);
+    if(idx>=0)arr.splice(idx,1);
+    save();cerrarFicha();
+    fichaCtx.tipo==='documento'?renderDocumentos():renderRegistros();
+    toast('Ficha eliminada');
+  },'Eliminar');
+}
+
+/* ---------- Solicitud por correo ---------- */
+function solicitar(fase){
+  const d=readFicha();
+  const map={elaboracion:{rol:'elaboración',resp:d.responsableElaborar},
+             revision:{rol:'revisión',resp:d.responsableRevisar},
+             aprobacion:{rol:'aprobación / firma',resp:d.responsableAprobar}};
+  const m=map[fase];const u=getUser(m.resp);
+  const para = (u&&u.correo)? u.correo : '';
+  const asunto=`Solicitud de ${m.rol}: ${d.codigo||'(sin código)'} - ${d.nombre||''}`;
+  const cuerpo=
+`Estimado(a) ${u?u.nombre:'responsable'},
+
+Se solicita su ${m.rol} del siguiente documento en el Control Documental de Gilmedica S.A.S.:
+
+• Código: ${d.codigo||'—'}
+• Nombre: ${d.nombre||'—'}
+• Versión: ${d.version||'1'}
+• Proceso: ${nombreProceso(d.proceso)||'—'}
+
+Por favor ingrese al sistema para registrar su ${m.rol}.
+${d.link?'\nDocumento original: '+d.link:''}
+
+Gracias,
+Sistema de Gestión de Calidad`;
+  document.getElementById('mailBody').innerHTML=`
+    <div class="field"><label>Para</label><input value="${esc(para)}" readonly style="width:100%;padding:8px 11px;border:1px solid var(--border-strong);border-radius:8px"></div>
+    <div class="field" style="margin-top:10px"><label>Asunto</label><input value="${esc(asunto)}" readonly style="width:100%;padding:8px 11px;border:1px solid var(--border-strong);border-radius:8px"></div>
+    <div class="field" style="margin-top:10px"><label>Mensaje</label><textarea readonly style="width:100%;min-height:160px;padding:8px 11px;border:1px solid var(--border-strong);border-radius:8px">${esc(cuerpo)}</textarea></div>
+    ${!para?'<div class="note" style="margin-top:12px;color:var(--danger);border-color:#e7b6b2;background:var(--danger-bg)">No hay correo para el responsable. Agrega su correo en el módulo Datos › Usuarios.</div>':''}`;
+  const link=document.getElementById('mailtoLink');
+  link.href=`mailto:${encodeURIComponent(para)}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
+  document.getElementById('overlayMail').classList.add('open');
+}
+
+/* ============================================================
+   DATOS MAESTROS
+   ============================================================ */
+function renderDatos(){
+  ['procesos','subprocesos','tiposDocumento','origenes','clasificaciones','recuperaciones','disposiciones'].forEach(renderChips);
+  renderEstados();renderUsuarios();renderPerfiles();
+  const el=document.getElementById('mantStats');
+  if(el)el.textContent=`Actualmente hay ${db.documentos.length} documento(s) y ${db.registros.length} formato(s) registrados.`;
+}
+function pedirConfirmacion(titulo,mensaje,onOk,okLabel){
+  document.getElementById('confTitle').textContent=titulo;
+  document.getElementById('confMsg').textContent=mensaje;
+  const ok=document.getElementById('confOk');
+  ok.textContent=okLabel||'Confirmar';
+  ok.onclick=()=>{closeOverlay('overlayConfirm');onOk();};
+  document.getElementById('overlayConfirm').classList.add('open');
+}
+function borrarFichasPrueba(){
+  const total=db.documentos.length+db.registros.length;
+  if(!total){toast('No hay fichas para borrar');return;}
+  pedirConfirmacion('Borrar fichas de prueba',
+    `Se borrarán ${db.documentos.length} documento(s) y ${db.registros.length} formato(s).\nLos datos maestros (procesos, usuarios, perfiles, etc.) se CONSERVAN.\n\nPodrás revertirlo con el botón “Deshacer”.`,
+    ()=>{
+      db.documentos=[];db.registros=[];save();
+      renderDatos();renderDocumentos();renderRegistros();renderAprobaciones();
+      toast(`${total} ficha(s) borrada(s). Datos maestros conservados.`);
+    },'Borrar fichas');
+}
+function restablecerTodo(){
+  pedirConfirmacion('Restablecer todo',
+    'Se borrará TODO, incluidos los datos maestros, y se volverá al estado inicial.\n\n¿Continuar?',
+    ()=>{
+      pedirConfirmacion('Confirmar restablecimiento','Confirma una vez más: ¿restablecer TODA la aplicación?',()=>{
+        db=seed();save();
+        fillListFilters();renderDatos();renderDocumentos();renderRegistros();renderAprobaciones();
+        toast('Aplicación restablecida al estado inicial.');
+      },'Sí, restablecer todo');
+    },'Continuar');
+}
+let editingChip=null; // {key,id}
+function renderChips(key){
+  const cont=document.getElementById('chips-'+key);if(!cont)return;
+  const list=db.config[key]||[];
+  if(!list.length){cont.innerHTML='<span class="pub-no" style="font-size:12.5px">Sin elementos.</span>';return;}
+  cont.innerHTML = list.map(x=>{
+    if(editingChip && editingChip.key===key && editingChip.id===x.id){
+      return `<span class="chip" style="padding-left:6px">
+        <input class="edit-inp" id="editchip-${key}" value="${esc(x.nombre)}" onkeydown="if(event.key==='Enter')saveChip('${key}','${x.id}');if(event.key==='Escape')cancelChip('${key}')">
+        <button class="ok" title="Guardar" onclick="saveChip('${key}','${x.id}')">✓</button>
+        <button title="Cancelar" onclick="cancelChip('${key}')">✕</button></span>`;
+    }
+    return `<span class="chip">${esc(x.nombre)}
+      <button class="ed" title="Editar" onclick="editChip('${key}','${x.id}')">✎</button>
+      <button title="Eliminar" onclick="delSimple('${key}','${x.id}')">✕</button></span>`;
+  }).join('');
+}
+function editChip(key,id){editingChip={key,id};renderChips(key);const i=document.getElementById('editchip-'+key);if(i){i.focus();i.select();}}
+function cancelChip(key){editingChip=null;renderChips(key);}
+function saveChip(key,id){
+  const v=(document.getElementById('editchip-'+key).value||'').trim();
+  if(!v){toast('El nombre no puede quedar vacío');return;}
+  const it=db.config[key].find(x=>x.id===id);if(it)it.nombre=v;
+  editingChip=null;save();renderChips(key);toast('Actualizado');
+}
+function addSimple(key){
+  const input=document.getElementById('add-'+key);const v=input.value.trim();if(!v)return;
+  db.config[key].push(mk(v));save();input.value='';renderChips(key);
+}
+function delSimple(key,id){
+  db.config[key]=db.config[key].filter(x=>x.id!==id);save();renderChips(key);
+}
+
+
+
+function renderEstados(){
+  const cont=document.getElementById('datosEstados');
+  cont.innerHTML = `<div class="legend-states" style="flex-direction:column;align-items:stretch;gap:8px">`+
+    ESTADOS.map(e=>`<div style="display:flex;align-items:center;justify-content:space-between">${badge(e.key)}<span style="font-size:12px;color:var(--muted)">color: ${e.color}</span></div>`).join('')+
+    `</div><div class="subline" style="margin-top:10px">Los estados son fijos porque definen el flujo de aprobación (elaborar → revisar → aprobar → vigente).</div>`;
+}
+
+let editingUser=null;
+function renderUsuarios(){
+  const cont=document.getElementById('datosUsuarios');
+  cont.innerHTML = `<div class="chips" style="flex-direction:column;align-items:stretch">`+
+    (db.config.usuarios.map(u=>{
+      if(editingUser===u.id){
+        return `<div class="chip" style="flex-direction:column;align-items:stretch;border-radius:8px;gap:6px;padding:10px 12px">
+          <input class="edit-inp" style="width:100%" id="eu_nombre" value="${esc(u.nombre)}" placeholder="Nombre">
+          <input class="edit-inp" style="width:100%" id="eu_cargo" value="${esc(u.cargo||'')}" placeholder="Cargo">
+          <input class="edit-inp" style="width:100%" id="eu_correo" value="${esc(u.correo||'')}" placeholder="Correo">
+          <select class="edit-inp" style="width:100%" id="eu_perfil">${optPerfiles(u.perfilId)}</select>
+          <div style="display:flex;gap:6px;justify-content:flex-end">
+            <button class="btn sm" onclick="cancelUsuario()">Cancelar</button>
+            <button class="btn primary sm" onclick="saveUsuario('${u.id}')">Guardar</button>
+          </div></div>`;
+      }
+      return `<div class="chip" style="justify-content:space-between;border-radius:8px;align-items:center">
+        <span style="display:flex;align-items:center;gap:10px">
+          ${u.firmaImg?`<img src="${u.firmaImg}" alt="firma" style="height:30px;max-width:120px;background:#fff;border:1px solid var(--border);border-radius:4px;padding:2px">`:''}
+          <span><strong>${esc(u.nombre)}</strong> · ${esc(u.cargo||'')} ${u.correo?'· '+esc(u.correo):''}${u.perfilId?' · <span style="color:var(--brand);font-weight:600">'+esc(nombrePerfil(u.perfilId))+'</span>':''}</span>
+        </span>
+        <span style="display:flex;gap:6px;align-items:center">
+          <button class="ed" title="Editar" onclick="editUsuario('${u.id}')">✎</button>
+          <label class="btn sm" style="padding:3px 9px;font-size:11px;cursor:pointer">${u.firmaImg?'Cambiar firma':'Cargar firma'}<input type="file" accept="image/*" class="hidden" onchange="onFirmaFileUser('${u.id}',event)"></label>
+          <button onclick="delUsuario('${u.id}')">✕</button>
+        </span></div>`;
+    }).join('')||'<span class="pub-no" style="font-size:12.5px">Sin usuarios.</span>')+`</div>
+    <div class="subline">Nuevo usuario</div>
+    <div class="addrow" style="flex-wrap:wrap"><input id="u_nombre" placeholder="Nombre" style="min-width:120px"><input id="u_cargo" placeholder="Cargo" style="min-width:120px"></div>
+    <div class="addrow" style="margin-top:8px;flex-wrap:wrap">
+      <input id="u_correo" placeholder="Correo" style="min-width:120px">
+      <select id="u_perfil" style="min-width:140px;padding:8px 10px;border:1px solid var(--border-strong);border-radius:8px">${optPerfiles('')}</select>
+    </div>
+    <div class="addrow" style="margin-top:8px;flex-wrap:wrap">
+      <label class="btn sm" style="cursor:pointer">📷 Firma (imagen)<input type="file" accept="image/*" class="hidden" onchange="onFirmaFileNew(event)"></label>
+      <button class="btn primary sm" onclick="addUsuario()">Agregar</button>
+    </div>
+    <div id="firmaPreview" style="margin-top:8px">${pendingFirma?`<img src="${pendingFirma}" alt="firma" style="height:34px;border:1px solid var(--border);border-radius:4px;padding:2px;background:#fff"> <span style="font-size:12px;color:var(--muted)">firma lista para el nuevo usuario</span>`:''}</div>`;
+}
+function editUsuario(id){editingUser=id;renderUsuarios();}
+function cancelUsuario(){editingUser=null;renderUsuarios();}
+function saveUsuario(id){
+  const n=val('eu_nombre');if(!n){toast('El nombre no puede quedar vacío');return;}
+  const u=getUser(id);if(u){u.nombre=n;u.cargo=val('eu_cargo');u.correo=val('eu_correo');u.perfilId=val('eu_perfil');}
+  editingUser=null;save();renderUsuarios();toast('Usuario actualizado');
+}
+function onFirmaFileNew(ev){
+  const f=ev.target.files[0];if(!f)return;
+  fileToFirma(f).then(d=>{pendingFirma=d;renderUsuarios();}).catch(()=>toast('No se pudo leer la imagen'));
+}
+function onFirmaFileUser(id,ev){
+  const f=ev.target.files[0];if(!f)return;
+  fileToFirma(f).then(d=>{const u=getUser(id);if(u){u.firmaImg=d;save();renderUsuarios();toast('Firma actualizada');}}).catch(()=>toast('No se pudo leer la imagen'));
+}
+function addUsuario(){
+  const n=val('u_nombre');if(!n){toast('Escribe el nombre');return;}
+  db.config.usuarios.push({id:uid(),nombre:n,cargo:val('u_cargo'),correo:val('u_correo'),perfilId:val('u_perfil'),firma:'',firmaImg:pendingFirma||''});
+  pendingFirma=null;save();renderUsuarios();
+}
+function delUsuario(id){db.config.usuarios=db.config.usuarios.filter(u=>u.id!==id);save();renderUsuarios();}
+
+let editingPerfil=null;
+function renderPerfiles(){
+  const cont=document.getElementById('datosPerfiles');
+  cont.innerHTML = db.config.perfiles.map(p=>{
+    if(editingPerfil===p.id){
+      return `<div class="chip" style="flex-direction:column;align-items:stretch;border-radius:8px;gap:8px;margin-bottom:8px;padding:10px 12px">
+        <input class="edit-inp" style="width:100%" id="ep_nombre" value="${esc(p.nombre)}" placeholder="Nombre del perfil">
+        <div class="chips">${PERMISOS.map(pm=>`<label class="chip" style="cursor:pointer"><input type="checkbox" value="${pm}" class="eperm-chk" ${(p.permisos||[]).includes(pm)?'checked':''}> ${pm}</label>`).join('')}</div>
+        <div style="display:flex;gap:6px;justify-content:flex-end">
+          <button class="btn sm" onclick="cancelPerfil()">Cancelar</button>
+          <button class="btn primary sm" onclick="savePerfil('${p.id}')">Guardar</button>
+        </div></div>`;
+    }
+    return `<div class="chip" style="justify-content:space-between;border-radius:8px;margin-bottom:8px;align-items:flex-start">
+      <span><strong>${esc(p.nombre)}</strong><br><span style="font-size:12px;color:var(--muted)">${(p.permisos||[]).join(', ')||'sin permisos'}</span></span>
+      <span style="display:flex;gap:6px;align-items:center">
+        <button class="ed" title="Editar" onclick="editPerfil('${p.id}')">✎</button>
+        <button onclick="delPerfil('${p.id}')">✕</button>
+      </span></div>`;
+  }).join('') ;
+  cont.innerHTML += `<div class="subline">Nuevo perfil</div>
+    <div class="addrow"><input id="p_nombre" placeholder="Nombre del perfil"></div>
+    <div class="chips" style="margin-top:8px">${PERMISOS.map(pm=>`<label class="chip" style="cursor:pointer"><input type="checkbox" value="${pm}" class="perm-chk"> ${pm}</label>`).join('')}</div>
+    <button class="btn primary sm" onclick="addPerfil()">Agregar perfil</button>`;
+}
+function editPerfil(id){editingPerfil=id;renderPerfiles();}
+function cancelPerfil(){editingPerfil=null;renderPerfiles();}
+function savePerfil(id){
+  const n=val('ep_nombre');if(!n){toast('El nombre no puede quedar vacío');return;}
+  const perms=[...document.querySelectorAll('.eperm-chk:checked')].map(c=>c.value);
+  const p=db.config.perfiles.find(x=>x.id===id);if(p){p.nombre=n;p.permisos=perms;}
+  editingPerfil=null;save();renderPerfiles();toast('Perfil actualizado');
+}
+function addPerfil(){
+  const n=val('p_nombre');if(!n){toast('Escribe el nombre del perfil');return;}
+  const perms=[...document.querySelectorAll('.perm-chk:checked')].map(c=>c.value);
+  db.config.perfiles.push({id:uid(),nombre:n,permisos:perms});save();renderPerfiles();
+}
+function delPerfil(id){db.config.perfiles=db.config.perfiles.filter(p=>p.id!==id);save();renderPerfiles();}
+
+/* ============================================================
+   IMPORT / EXPORT JSON
+   ============================================================ */
+function exportJSON(){
+  try{
+    const data=JSON.stringify(db,null,2);
+    const blob=new Blob([data],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;
+    a.download='gilmedica_control_documental_'+new Date().toISOString().slice(0,10)+'.json';
+    a.style.display='none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},150);
+    toast('Respaldo exportado ('+(db.documentos.length+db.registros.length)+' fichas)');
+  }catch(e){
+    console.error('export error',e);
+    // Fallback: abrir el JSON en una pestaña nueva para copiar/guardar manualmente
+    try{
+      const w=window.open('','_blank');
+      w.document.write('<pre>'+JSON.stringify(db,null,2).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]))+'</pre>');
+      toast('Descarga bloqueada: se abrió el JSON para guardarlo manualmente');
+    }catch(_){toast('No se pudo exportar: '+e.message);}
+  }
+}
+function importJSON(ev){
+  const file=ev.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const data=JSON.parse(reader.result);
+      if(!data.config||!('documentos'in data)){throw new Error('formato');}
+      db=data;migrate();save();
+      toast('Datos importados correctamente');
+      switchTab(document.querySelector('nav.tabs button.active').dataset.tab);
+      fillListFilters();
+    }catch(e){toast('Archivo JSON no válido');}
+    ev.target.value='';
+  };
+  reader.readAsText(file);
+}
+
+/* ---------- cierre con clic en overlay ---------- */
+['overlayFicha','overlayMail','overlayFecha','overlayConfirm','overlayGD'].forEach(idov=>{
+  const ov=document.getElementById(idov);
+  ov.addEventListener('mousedown',e=>{if(e.target===ov)ov.classList.remove('open');});
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeOverlay('overlayFicha');closeOverlay('overlayMail');closeOverlay('overlayFecha');closeOverlay('overlayConfirm');closeOverlay('overlayGD');}});
+
+/* ---------- init ---------- */
+window.__bootApp = async function(){
+  try{
+    setSyncState('sync');
+    await load();
+    fillListFilters();
+    renderDocumentos();
+    attachRealtime();
+    setSyncState('ok');
+  }catch(e){
+    console.error('boot',e);
+    setSyncState('err');
+    toast('Error al cargar desde la nube. Revisa la conexión y las reglas de Firestore.');
+  }
+};
+</script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+  import { getFirestore, collection, getDocs, getDoc, doc, setDoc, deleteDoc, writeBatch, onSnapshot } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+  const firebaseConfig = {
+    apiKey: "AIzaSyA1x4ey_y3mSOSAt4d3VRxXZdrMaukIHSs",
+    authDomain: "gilmedica-control-documental.firebaseapp.com",
+    projectId: "gilmedica-control-documental",
+    storageBucket: "gilmedica-control-documental.firebasestorage.app",
+    messagingSenderId: "453476472163",
+    appId: "1:453476472163:web:3357027e4ed846bba06f56",
+    measurementId: "G-KP4TR311LS"
+  };
+  const app = initializeApp(firebaseConfig);
+  const fdb = getFirestore(app);
+  window.FB = { app, fdb, collection, getDocs, getDoc, doc, setDoc, deleteDoc, writeBatch, onSnapshot };
+  if (window.__bootApp) window.__bootApp();
+  else window.addEventListener('DOMContentLoaded', () => window.__bootApp && window.__bootApp());
+</script>
+</body>
+</html>
