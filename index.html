@@ -203,11 +203,42 @@
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--text);color:#fff;padding:12px 18px;border-radius:10px;font-size:13.5px;box-shadow:0 10px 30px rgba(0,0,0,.3);z-index:80;opacity:0;pointer-events:none;transition:.25s}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px)}
   .hidden{display:none!important}
+  .login-screen{position:fixed;inset:0;z-index:5000;background:linear-gradient(135deg,#13335c,#0c2440);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:20px}
+  .login-card{background:#fff;border-radius:16px;padding:30px 28px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,.3);text-align:center}
+  .login-logo .mark{display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:13px;background:#13335c;color:#fff;font-weight:800;font-size:24px;margin-bottom:10px}
+  .login-card h2{margin:4px 0 2px;font-size:19px;color:#13335c}
+  .login-sub{color:#647082;font-size:12.5px;margin-bottom:18px}
+  .login-field{text-align:left;margin-bottom:12px}
+  .login-field label{display:block;font-size:12px;font-weight:600;color:#39465a;margin-bottom:4px}
+  .login-field input{width:100%;padding:10px 12px;border:1px solid #d4dbe6;border-radius:9px;font-size:14px}
+  .login-field input:focus{outline:none;border-color:#13335c;box-shadow:0 0 0 3px rgba(19,51,92,.12)}
+  .login-btn{width:100%;background:#13335c;color:#fff;border:none;border-radius:9px;padding:11px;font-size:15px;font-weight:600;cursor:pointer;margin-top:6px}
+  .login-btn:hover{background:#0e2647}
+  .login-btn:disabled{opacity:.6;cursor:default}
+  .login-link{background:none;border:none;color:#13335c;font-size:12.5px;cursor:pointer;margin-top:12px;text-decoration:underline}
+  .login-msg{min-height:18px;font-size:12.5px;margin:4px 0;color:#b42318}
+  .login-msg.ok{color:#1e7e34}
+  .login-foot{color:rgba(255,255,255,.7);font-size:12px}
+  .user-chip{font-size:12px;font-weight:600;color:#fff;background:rgba(255,255,255,.16);padding:5px 11px;border-radius:14px;white-space:nowrap;max-width:230px;overflow:hidden;text-overflow:ellipsis}
   .req-flag{color:var(--danger)}
   .legend-states{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--muted);align-items:center}
 </style>
 </head>
 <body>
+
+<div id="loginScreen" class="login-screen">
+  <div class="login-card">
+    <div class="login-logo"><span class="mark">G</span></div>
+    <h2>Gilmedica S.A.S.</h2>
+    <div class="login-sub">Control documental · SGC ISO 9001</div>
+    <div class="login-field"><label>Correo</label><input id="login_email" type="email" autocomplete="username" placeholder="tucorreo@ejemplo.com"></div>
+    <div class="login-field"><label>Contraseña</label><input id="login_pass" type="password" autocomplete="current-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <div id="loginMsg" class="login-msg"></div>
+    <button id="loginBtn" class="login-btn" onclick="doLogin()">Ingresar</button>
+    <button class="login-link" onclick="doReset()">¿Olvidaste tu contraseña?</button>
+  </div>
+  <div class="login-foot">Acceso restringido a personal autorizado</div>
+</div>
 
 <header class="topbar">
   <div class="logo">
@@ -215,12 +246,14 @@
     <span>Gilmedica S.A.S.<small>Control documental · SGC ISO 9001</small></span>
   </div>
   <div class="spacer"></div>
+  <span id="userChip" class="user-chip hidden"></span>
   <span id="syncState" class="sync-pend" title="Estado de sincronización con la nube">Conectando…</span>
   <button class="tool" id="undoBtn" onclick="undo()" title="Deshacer la última acción" disabled>↶ Deshacer</button>
   <button class="tool" id="redoBtn" onclick="redo()" title="Rehacer la acción deshecha" disabled>↷ Rehacer</button>
   <button class="tool" onclick="exportJSON()" title="Descargar respaldo .json">⬇ Exportar</button>
   <button class="tool" onclick="document.getElementById('importInput').click()" title="Cargar respaldo .json">⬆ Importar</button>
   <input id="importInput" type="file" accept="application/json" class="hidden" onchange="importJSON(event)">
+  <button class="tool hidden" id="logoutBtn" onclick="logout()" title="Cerrar sesión">⎋ Salir</button>
 </header>
 
 <nav class="tabs">
@@ -762,9 +795,79 @@ function now(){const d=new Date();return {fecha:d.toLocaleDateString('es-CO'),ho
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2600);}
 
 /* ============================================================
+   AUTENTICACIÓN (Firebase Auth · correo y contraseña)
+   ============================================================ */
+let currentUser=null;        // usuario de la app (de db.config.usuarios) o invitado autenticado
+let appLoaded=false;
+function sistemaSinConfigurar(){return !db||!db.config||!db.config.usuarios.some(u=>u.correo&&u.correo.trim());}
+function esAdmin(){
+  if(sistemaSinConfigurar())return true;          // modo configuración inicial
+  if(!currentUser||currentUser.__guest)return false;
+  const p=db.config.perfiles.find(x=>x.id===currentUser.perfilId);
+  return !!(p&&p.permisos&&p.permisos.includes('Configurar'));
+}
+function resolveCurrentUser(email){
+  const e=(email||'').toLowerCase();
+  const u=db.config.usuarios.find(x=>(x.correo||'').toLowerCase()===e);
+  currentUser = u ? u : {id:'__'+e,nombre:email,cargo:'',correo:email,firma:'',firmaImg:'',perfilId:null,__guest:true};
+}
+function puedeFirmar(item,accion){
+  if(!currentUser)return false;
+  if(esAdmin())return true;                         // admin puede firmar / dar soporte
+  if(currentUser.__guest)return false;              // correo no registrado en Datos maestros
+  const respId=accion==='elaborado'?item.responsableElaborar:accion==='revisado'?item.responsableRevisar:item.responsableAprobar;
+  if(!respId)return true;                            // sin responsable asignado: cualquiera autenticado
+  return currentUser.id===respId;                   // solo el responsable asignado
+}
+/* ---- Pantalla de inicio de sesión ---- */
+function loginMsg(txt,ok){const m=document.getElementById('loginMsg');if(!m)return;m.textContent=txt||'';m.className='login-msg'+(ok?' ok':'');}
+function loginBusy(b){const btn=document.getElementById('loginBtn');if(btn){btn.disabled=b;btn.textContent=b?'Ingresando…':'Ingresar';}}
+function mapAuthError(e){
+  const c=(e&&e.code)||'';
+  if(c.includes('invalid-credential')||c.includes('wrong-password')||c.includes('user-not-found'))return 'Correo o contraseña incorrectos.';
+  if(c.includes('invalid-email'))return 'El correo no es válido.';
+  if(c.includes('too-many-requests'))return 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.';
+  if(c.includes('network'))return 'Sin conexión. Revisa tu internet.';
+  if(c.includes('user-disabled'))return 'Este usuario está deshabilitado.';
+  return 'No se pudo iniciar sesión. Inténtalo de nuevo.';
+}
+async function doLogin(){
+  const email=val('login_email');const pass=document.getElementById('login_pass').value;
+  if(!email||!pass){loginMsg('Ingresa tu correo y contraseña');return;}
+  if(!window.FB||!window.FB.signIn){loginMsg('Conexión no disponible. Abre la app por https.');return;}
+  loginMsg('');loginBusy(true);
+  try{await window.FB.signIn(email,pass);}        // onAuthStateChanged se encarga del resto
+  catch(e){loginMsg(mapAuthError(e));}
+  finally{loginBusy(false);}
+}
+async function doReset(){
+  const email=val('login_email');
+  if(!email){loginMsg('Escribe tu correo y te enviaremos el enlace de restablecimiento');return;}
+  if(!window.FB||!window.FB.resetPwd){loginMsg('Conexión no disponible.');return;}
+  try{await window.FB.resetPwd(email);loginMsg('Te enviamos un correo para restablecer la contraseña.',true);}
+  catch(e){loginMsg(mapAuthError(e));}
+}
+function logout(){if(window.FB&&window.FB.signOut)window.FB.signOut();}
+function showLogin(){const s=document.getElementById('loginScreen');if(s)s.style.display='flex';
+  const p=document.getElementById('login_pass');if(p)p.value='';}
+function showApp(){const s=document.getElementById('loginScreen');if(s)s.style.display='none';}
+function refreshAuthUI(){
+  const chip=document.getElementById('userChip');const lo=document.getElementById('logoutBtn');
+  if(currentUser){
+    let txt=currentUser.nombre+(currentUser.cargo?' · '+currentUser.cargo:'');
+    if(currentUser.__guest&&!sistemaSinConfigurar())txt+=' (sin perfil)';
+    chip.textContent=txt;chip.classList.remove('hidden');lo.classList.remove('hidden');
+  }else{chip.classList.add('hidden');lo.classList.add('hidden');}
+  // El botón de Datos maestros solo para administradores
+  const btnDatos=document.querySelector('nav.tabs button[data-tab="datos"]');
+  if(btnDatos)btnDatos.classList.toggle('hidden',!esAdmin());
+}
+
+/* ============================================================
    NAVEGACIÓN
    ============================================================ */
 function switchTab(tab){
+  if(tab==='datos'&&!esAdmin()){toast('Solo el administrador puede acceder a Datos maestros');tab='documentos';}
   document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-'+tab).classList.add('active');
@@ -1371,13 +1474,19 @@ function flujo(tipo,id,accion){
     return;
   }
   // elaborado / revisado / aprobado: la fecha y hora se registran manualmente
+  if(!puedeFirmar(item,accion)){
+    const respId=accion==='elaborado'?item.responsableElaborar:accion==='revisado'?item.responsableRevisar:item.responsableAprobar;
+    const r=getUser(respId);
+    toast(currentUser&&currentUser.__guest?'Tu correo no está registrado en Datos maestros. Pide al administrador que lo registre.':(r?`Este paso está asignado a ${r.nombre}. Inicia sesión como esa persona para firmar.`:'No tienes permiso para firmar este paso.'));
+    return;
+  }
   const rolTxt = accion==='elaborado'?'elaboración':accion==='revisado'?'revisión':'aprobación';
-  pedirFechaHora('Registrar '+rolTxt,(fecha,hora)=>{
+  pedirFechaHora('Registrar '+rolTxt+' · '+(currentUser?currentUser.nombre:''),(fecha,hora)=>{
     const ts={fecha,hora};
-    if(accion==='elaborado'){item.elaboro=firmaDe(getUser(item.responsableElaborar),ts);item.estado='revision';toast('Elaboración registrada → pasa a revisión');}
-    else if(accion==='revisado'){item.reviso=firmaDe(getUser(item.responsableRevisar),ts);item.estado='aprobacion';toast('Revisión registrada → pasa a aprobación');}
+    if(accion==='elaborado'){item.elaboro=firmaDe(currentUser,ts);item.estado='revision';toast('Elaboración registrada → pasa a revisión');}
+    else if(accion==='revisado'){item.reviso=firmaDe(currentUser,ts);item.estado='aprobacion';toast('Revisión registrada → pasa a aprobación');}
     else if(accion==='aprobado'){
-      item.aprobo=firmaDe(getUser(item.responsableAprobar),ts);item.estado='vigente';
+      item.aprobo=firmaDe(currentUser,ts);item.estado='vigente';
       // La versión anterior (mismo código, otra ficha vigente/publicada) pasa a obsoleta
       let obsoletadas=0;
       if(item.codigo){
@@ -2360,25 +2469,39 @@ function importJSON(ev){
 });
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeOverlay('overlayFicha');closeOverlay('overlayMail');closeOverlay('overlayFecha');closeOverlay('overlayConfirm');closeOverlay('overlayGD');}});
 
-/* ---------- init ---------- */
-window.__bootApp = async function(){
-  try{
-    setSyncState('sync');
-    await load();
-    fillListFilters();
-    renderDocumentos();
-    attachRealtime();
-    setSyncState('ok');
-  }catch(e){
-    console.error('boot',e);
-    setSyncState('err');
-    toast('Error al cargar desde la nube. Revisa la conexión y las reglas de Firestore.');
+/* ---------- init: el arranque depende del estado de autenticación ---------- */
+window.__onAuth = async function(fbUser){
+  if(fbUser){
+    if(!appLoaded){
+      try{
+        setSyncState('sync');
+        await load();
+        fillListFilters();
+        attachRealtime();
+        appLoaded=true;
+        setSyncState('ok');
+      }catch(e){
+        console.error('boot',e);setSyncState('err');
+        toast('Error al cargar desde la nube. Revisa la conexión y las reglas de Firestore.');
+        return;
+      }
+    }
+    resolveCurrentUser(fbUser.email);
+    refreshAuthUI();
+    showApp();
+    const tab=document.querySelector('nav.tabs button.active');
+    switchTab(tab?tab.dataset.tab:'documentos');
+  }else{
+    currentUser=null;
+    refreshAuthUI();
+    showLogin();
   }
 };
 </script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
   import { getFirestore, collection, getDocs, getDoc, doc, setDoc, deleteDoc, writeBatch, onSnapshot } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+  import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, setPersistence, indexedDBLocalPersistence } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
   const firebaseConfig = {
     apiKey: "AIzaSyA1x4ey_y3mSOSAt4d3VRxXZdrMaukIHSs",
     authDomain: "gilmedica-control-documental.firebaseapp.com",
@@ -2390,9 +2513,14 @@ window.__bootApp = async function(){
   };
   const app = initializeApp(firebaseConfig);
   const fdb = getFirestore(app);
-  window.FB = { app, fdb, collection, getDocs, getDoc, doc, setDoc, deleteDoc, writeBatch, onSnapshot };
-  if (window.__bootApp) window.__bootApp();
-  else window.addEventListener('DOMContentLoaded', () => window.__bootApp && window.__bootApp());
+  const auth = getAuth(app);
+  setPersistence(auth, indexedDBLocalPersistence).catch(()=>{}); // mantiene la sesión sin usar localStorage
+  window.FB = { app, fdb, auth, collection, getDocs, getDoc, doc, setDoc, deleteDoc, writeBatch, onSnapshot,
+    signIn:(e,p)=>signInWithEmailAndPassword(auth,e,p),
+    signOut:()=>signOut(auth),
+    resetPwd:(e)=>sendPasswordResetEmail(auth,e)
+  };
+  onAuthStateChanged(auth, u => { if (window.__onAuth) window.__onAuth(u); });
 </script>
 </body>
 </html>
