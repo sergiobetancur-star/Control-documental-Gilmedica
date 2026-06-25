@@ -183,7 +183,7 @@
   .link-row .open-btn:hover{background:var(--brand);color:#fff;border-color:var(--brand)}
   .link-row .open-btn:disabled{opacity:.45;cursor:not-allowed;background:#f1f3f6;color:var(--muted-2)}
 
-  .signbox{border:1px dashed var(--border-strong);border-radius:8px;padding:10px 12px;background:#fbfcfe}
+  .signbox{border:1px dashed var(--border-strong);border-radius:8px;padding:10px 12px;background:#fff}
   .signbox .who{font-weight:700}
   .signbox .meta{font-size:12px;color:var(--muted);margin-top:3px}
   .signbox .none{color:var(--muted-2);font-style:italic}
@@ -1596,6 +1596,7 @@ function flujo(tipo,id,accion){
     else if(accion==='revisado'){item.reviso=firmaDe(currentUser,ts);item.estado='aprobacion';toast('Revisión registrada → pasa a aprobación');}
     else if(accion==='aprobado'){
       item.aprobo=firmaDe(currentUser,ts);item.estado='vigente';
+      item.fechaVigencia=fechaISO(fecha);   // la vigencia toma la fecha de la firma de aprobación
       // La versión anterior (mismo código, otra ficha vigente/publicada) pasa a obsoleta
       let obsoletadas=0;
       if(item.codigo){
@@ -1615,6 +1616,7 @@ function flujo(tipo,id,accion){
 function firmaDe(u,ts){
   return {nombre:u?u.nombre:'(responsable no asignado)',cargo:u?u.cargo:'',firma:u?(u.firma||''):'',firmaImg:u?(u.firmaImg||''):'',fecha:ts.fecha,hora:ts.hora};
 }
+function fechaISO(f){if(!f)return '';const m=String(f).match(/^(\d{2})\/(\d{2})\/(\d{4})$/);return m?`${m[3]}-${m[2]}-${m[1]}`:f;}
 /* Pide fecha y hora manualmente antes de registrar una firma */
 function pedirFechaHora(titulo,cb){
   const d=new Date();
@@ -1680,7 +1682,23 @@ function abrirFicha(tipo,id){
   document.getElementById('fichaBody').innerHTML = fichaHTML(base,tipo);
   document.getElementById('fichaActions').innerHTML = fichaFooterActions(base,id);
   setFichaEstadoBadge(base.estado);
+  aplicarBloqueoFicha(base);
   document.getElementById('overlayFicha').classList.add('open');
+}
+/* Tras la aprobación, la ficha queda de solo lectura excepto enlaces, "publicado" y clasificación archivística */
+const FICHA_EDITABLE_TRAS_APROBACION=new Set(['f_correoSolicitud','f_correoDivulgacion','f_correoEliminacion','f_link','f_linkPublicado','f_publicado']);
+function fichaBloqueada(d){return ['vigente','publicado','obsoleto'].includes(d.estado);}
+function aplicarBloqueoFicha(d){
+  const cont=document.getElementById('fichaBody');if(!cont)return;
+  const aviso=document.getElementById('fichaAviso');
+  const bloq=fichaBloqueada(d);
+  if(aviso)aviso.style.display=bloq?'block':'none';
+  cont.querySelectorAll('input,select,textarea').forEach(el=>{
+    if(!bloq){el.disabled=false;return;}
+    if(FICHA_EDITABLE_TRAS_APROBACION.has(el.id)){el.disabled=false;return;}
+    if(el.closest('#clasifList')){el.disabled=false;return;}   // serie/subserie editable
+    el.disabled=true;
+  });
 }
 function setFichaEstadoBadge(estadoKey){
   const el=document.getElementById('fichaEstado');if(el)el.innerHTML=badge(estadoKey);
@@ -2014,7 +2032,7 @@ function exportarFichaPrint(){
     .srol{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#647082;font-weight:700;margin-bottom:4px}
     .swho{font-weight:700}.smeta{font-size:11px;color:#647082;margin-top:2px}
     .snone{color:#8a94a3;font-style:italic}
-    .simg{max-height:46px;max-width:100%;display:block;margin:6px 0}
+    .simg{max-height:46px;max-width:100%;display:block;margin:6px 0;background:#fff;border:1px solid #e2e8f0;border-radius:4px;padding:2px}
     table.cc{width:100%;border-collapse:collapse;margin-top:4px}
     table.cc th{background:#f1f5fa;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#647082;padding:6px 8px;border:1px solid #dde3ec}
     table.cc td{padding:6px 8px;border:1px solid #dde3ec;vertical-align:top}
@@ -2104,6 +2122,9 @@ function optUsuarios(val){return `<option value="">— sin asignar —</option>`
 function fichaHTML(d,tipo){
   const esRegistro = tipo==='registro';
   return `
+  <div id="fichaAviso" style="display:none;background:#e3f6ec;border:1px solid #c2ead4;color:#0a7d4d;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:12.5px;font-weight:600">
+    🔒 Documento aprobado. Solo puedes modificar los enlaces, el campo «Publicado» y la clasificación archivística. Para cambios mayores, crea una «Nueva versión».
+  </div>
   <fieldset class="section"><legend>Identificación</legend>
     <div class="fgrid three">
       <div class="field"><label>Código <span class="req-flag">*</span></label><input id="f_codigo" value="${esc(d.codigo)}" placeholder="Ej. GC-PR-001"></div>
@@ -2199,7 +2220,7 @@ function signbox(rol,s){
   return `<div class="field"><label>${rol}</label><div class="signbox">
     <div class="who">${esc(s.nombre)}</div>
     <div class="meta">${esc(s.cargo||'')}</div>
-    ${s.firmaImg?`<img src="${s.firmaImg}" alt="firma" style="max-height:42px;margin:6px 0;display:block">`:(s.firma?`<div class="meta">Firma: ${esc(s.firma)}</div>`:'')}
+    ${s.firmaImg?`<img src="${s.firmaImg}" alt="firma" style="max-height:42px;margin:6px 0;display:block;background:#fff;border:1px solid var(--border);border-radius:4px;padding:2px">`:(s.firma?`<div class="meta">Firma: ${esc(s.firma)}</div>`:'')}
     <div class="meta">${esc(s.fecha||'')} ${esc(s.hora||'')}</div>
   </div></div>`;
 }
@@ -2248,6 +2269,14 @@ function guardarFicha(){
   const arr=fichaCtx.tipo==='documento'?db.documentos:db.registros;
   const idx=arr.findIndex(x=>x.id===d.id);
   const esNuevo=idx<0;
+  // No permitir un documento nuevo con un código ya existente (usar "Nueva versión" para versiones)
+  if(esNuevo){
+    const cod=(d.codigo||'').trim().toLowerCase();
+    if(cod && arr.some(x=>(x.codigo||'').trim().toLowerCase()===cod)){
+      toast('Ya existe un '+(fichaCtx.tipo==='documento'?'documento':'formato')+' con ese código. Si quieres una nueva versión, usa «Nueva versión».');
+      return;
+    }
+  }
   if(idx>=0)arr[idx]=d; else arr.push(d);
   save();cerrarFicha();
   logEvent(esNuevo?'Creó ficha':'Editó ficha',`${fichaCtx.tipo} ${d.codigo||''} v${d.version||''} — ${d.nombre||''}`);
