@@ -2032,7 +2032,7 @@ function exportarFichaPrint(){
     .srol{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#647082;font-weight:700;margin-bottom:4px}
     .swho{font-weight:700}.smeta{font-size:11px;color:#647082;margin-top:2px}
     .snone{color:#8a94a3;font-style:italic}
-    .simg{max-height:46px;max-width:100%;display:block;margin:6px 0;background:#fff;border:1px solid #e2e8f0;border-radius:4px;padding:2px}
+    .simg{max-height:46px;max-width:100%;display:block;margin:6px 0;background:#fff;border:none;border-radius:4px;padding:2px}
     table.cc{width:100%;border-collapse:collapse;margin-top:4px}
     table.cc th{background:#f1f5fa;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#647082;padding:6px 8px;border:1px solid #dde3ec}
     table.cc td{padding:6px 8px;border:1px solid #dde3ec;vertical-align:top}
@@ -2220,7 +2220,7 @@ function signbox(rol,s){
   return `<div class="field"><label>${rol}</label><div class="signbox">
     <div class="who">${esc(s.nombre)}</div>
     <div class="meta">${esc(s.cargo||'')}</div>
-    ${s.firmaImg?`<img src="${s.firmaImg}" alt="firma" style="max-height:42px;margin:6px 0;display:block;background:#fff;border:1px solid var(--border);border-radius:4px;padding:2px">`:(s.firma?`<div class="meta">Firma: ${esc(s.firma)}</div>`:'')}
+    ${s.firmaImg?`<img src="${s.firmaImg}" alt="firma" style="max-height:42px;margin:6px 0;display:block;background:#fff;border:none;border-radius:4px;padding:2px">`:(s.firma?`<div class="meta">Firma: ${esc(s.firma)}</div>`:'')}
     <div class="meta">${esc(s.fecha||'')} ${esc(s.hora||'')}</div>
   </div></div>`;
 }
@@ -2510,7 +2510,7 @@ function renderUsuarios(){
       }
       return `<div class="chip" style="justify-content:space-between;border-radius:8px;align-items:center">
         <span style="display:flex;align-items:center;gap:10px">
-          ${u.firmaImg?`<img src="${u.firmaImg}" alt="firma" style="height:30px;max-width:120px;background:#fff;border:1px solid var(--border);border-radius:4px;padding:2px">`:''}
+          ${u.firmaImg?`<img src="${u.firmaImg}" alt="firma" style="height:30px;max-width:120px;background:#fff;border:none;border-radius:4px;padding:2px">`:''}
           <span><strong>${esc(u.nombre)}</strong> · ${esc(u.cargo||'')} ${u.correo?'· '+esc(u.correo):''}${u.perfilId?' · <span style="color:var(--brand);font-weight:600">'+esc(nombrePerfil(u.perfilId))+'</span>':''}</span>
         </span>
         <span style="display:flex;gap:6px;align-items:center">
