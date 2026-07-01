@@ -854,7 +854,10 @@ function attachRealtime(){
   fb.onSnapshot(fb.doc(fb.fdb,'meta','config'),snap=>{
     if(!snap.exists()||snap.metadata.hasPendingWrites)return;
     const meta=snap.data();
-    db.config=meta.config||db.config;db.gestion.ccd=meta.ccd||[];db.gestion.trd=meta.trd||[];
+    db.config=meta.config||db.config;db.config=db.config||{};
+    ['procesos','subprocesos','tiposDocumento','origenes','usuarios','perfiles','clasificaciones','recuperaciones','disposiciones','comites'].forEach(k=>db.config[k]=db.config[k]||[]);
+    db.actas=db.actas||[];
+    db.gestion.ccd=meta.ccd||[];db.gestion.trd=meta.trd||[];
     lastSynced.config=clone(db.config);lastSynced.gestion.ccd=clone(db.gestion.ccd);lastSynced.gestion.trd=clone(db.gestion.trd);
     fillListFilters();scheduleRerender();
   },err=>console.error('realtime config',err));
@@ -2743,12 +2746,13 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeOverlay('overl
    MÓDULO ACTAS + COMITÉS
    ============================================================ */
 let actaCtx=null;
-function comiteById(id){return db.config.comites.find(c=>c.id===id);}
+function comiteById(id){return (db.config.comites||[]).find(c=>c.id===id);}
 function comiteNombre(id){const c=comiteById(id);return c?c.nombre:'';}
 
 /* ---- Comités (Datos maestros) ---- */
 function renderComites(){
   const cont=document.getElementById('datosComites');if(!cont)return;
+  db.config.comites=db.config.comites||[];
   const cs=db.config.comites;
   cont.innerHTML=`<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="btn ok sm" onclick="nuevoComite()">＋ Nuevo comité</button></div>
     ${cs.length?cs.map(c=>`<div class="chip" style="border-radius:8px;justify-content:space-between;width:100%;margin-bottom:6px;padding:8px 10px">
@@ -2759,7 +2763,7 @@ function renderComites(){
 function comiteFields(){return [{k:'nombre',h:'Nombre del comité',type:'text'},{k:'participantes',h:'Participantes',type:'usuarios'}];}
 function nuevoComite(){gdModal('Nuevo comité','Selecciona los participantes',comiteFields(),{id:uid(),nombre:'',participantes:[]},guardarComite);}
 function editComite(id){const c=comiteById(id);gdModal('Editar comité','',comiteFields(),JSON.parse(JSON.stringify(c)),guardarComite,()=>delComite(id));}
-function guardarComite(d){if(!d.nombre){toast('El nombre del comité es obligatorio');return;}const a=db.config.comites;const i=a.findIndex(x=>x.id===d.id);i>=0?a[i]=d:a.push(d);save();closeOverlay('overlayGD');renderComites();toast('Comité guardado');}
+function guardarComite(d){if(!d.nombre){toast('El nombre del comité es obligatorio');return;}db.config.comites=db.config.comites||[];const a=db.config.comites;const i=a.findIndex(x=>x.id===d.id);i>=0?a[i]=d:a.push(d);save();closeOverlay('overlayGD');renderComites();fillActasComiteFiltro&&fillActasComiteFiltro();toast('Comité guardado');}
 function delComite(id){pedirConfirmacion('Eliminar comité','¿Eliminar este comité?\n\nPodrás revertirlo con «Deshacer».',()=>{db.config.comites=db.config.comites.filter(x=>x.id!==id);save();closeOverlay('overlayGD');renderComites();toast('Comité eliminado');},'Eliminar');}
 
 /* ---- Estado del acta (derivado de las firmas) ---- */
@@ -2769,7 +2773,7 @@ function actaEstadoBadge(e){return e==='aprobada'?'<span class="badge badge-verd
 /* ---- Listado de actas ---- */
 function fillActasComiteFiltro(){
   const sel=document.getElementById('actasComiteFiltro');if(!sel)return;const cur=sel.value;
-  sel.innerHTML='<option value="">Todos los comités</option>'+db.config.comites.map(c=>`<option value="${c.id}">${esc(c.nombre)}</option>`).join('');
+  sel.innerHTML='<option value="">Todos los comités</option>'+(db.config.comites||[]).map(c=>`<option value="${c.id}">${esc(c.nombre)}</option>`).join('');
   sel.value=cur||'';
 }
 function renderActas(){
@@ -2790,7 +2794,7 @@ function renderActas(){
   </tr>`).join('');
 }
 function nuevoActaObj(){return {id:uid(),numero:'',comiteId:'',fechaReunion:'',duracion:'',lugar:'',objetivo:'',link:'',estado:'poraprobar',asistentes:[],tareas:[]};}
-function nuevaActa(){if(!db.config.comites.length){toast('Primero crea un comité en Datos maestros');return;}abrirActa(null);}
+function nuevaActa(){db.config.comites=db.config.comites||[];if(!db.config.comites.length){toast('Primero crea un comité en Datos maestros');return;}abrirActa(null);}
 
 /* Reúne el último estado de cada tarea (por tid) de las actas del comité y devuelve las pendientes */
 function tareasPendientesDeComite(comiteId){
