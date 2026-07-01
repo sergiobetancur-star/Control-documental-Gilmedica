@@ -790,6 +790,10 @@ async function runPersist(){
 function setSyncState(s){const el=document.getElementById('syncState');if(!el)return;
   el.textContent=s==='sync'?'Sincronizando…':s==='ok'?'Sincronizado':'Sin conexión';
   el.className='sync-'+(s==='err'?'err':s==='sync'?'pend':'ok');}
+// Forzar el guardado inmediato de cambios pendientes (al cerrar u ocultar la pestaña)
+function flushPersist(){if(persistTimer){clearTimeout(persistTimer);persistTimer=null;}if(!persisting)runPersist();else persistAgain=true;}
+window.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flushPersist();});
+window.addEventListener('pagehide',flushPersist);
 function collOps(ops,name,arr,lastArr){
   const fb=window.FB;
   const lastById={};(lastArr||[]).forEach(x=>lastById[x.id]=x);
@@ -809,13 +813,24 @@ async function persistDiff(){
   collOps(ops,'subseries',db.gestion.subseries,lastSynced.gestion.subseries);
   collOps(ops,'dependencias',db.gestion.dependencias,lastSynced.gestion.dependencias);
   collOps(ops,'tvd',db.gestion.tvd,lastSynced.gestion.tvd);
-  const cfgNow=JSON.stringify({config:db.config,ccd:db.gestion.ccd,trd:db.gestion.trd});
-  const cfgLast=JSON.stringify({config:lastSynced.config,ccd:lastSynced.gestion.ccd,trd:lastSynced.gestion.trd});
-  if(cfgNow!==cfgLast)ops.push({type:'set',ref:fb.doc(fb.fdb,'meta','config'),data:JSON.parse(cfgNow)});
+  // Config: escribir SOLO las claves que cambiaron, con merge por campo, para que
+  // ediciones simultáneas de otros usuarios/pestañas en OTRAS claves no se pisen entre sí.
+  const lastCfg=lastSynced.config||{};
+  const cfgData={};let cfgChanged=false;
+  Object.keys(db.config).forEach(k=>{
+    if(JSON.stringify(db.config[k])!==JSON.stringify(lastCfg[k])){cfgData.config=cfgData.config||{};cfgData.config[k]=db.config[k];cfgChanged=true;}
+  });
+  if(JSON.stringify(db.gestion.ccd)!==JSON.stringify(lastSynced.gestion.ccd)){cfgData.ccd=db.gestion.ccd;cfgChanged=true;}
+  if(JSON.stringify(db.gestion.trd)!==JSON.stringify(lastSynced.gestion.trd)){cfgData.trd=db.gestion.trd;cfgChanged=true;}
+  if(cfgChanged)ops.push({type:'merge',ref:fb.doc(fb.fdb,'meta','config'),data:cfgData});
   if(!ops.length)return;
   for(let i=0;i<ops.length;i+=450){
     const batch=fb.writeBatch(fb.fdb);
-    ops.slice(i,i+450).forEach(o=>{o.type==='set'?batch.set(o.ref,o.data):batch.delete(o.ref);});
+    ops.slice(i,i+450).forEach(o=>{
+      if(o.type==='set')batch.set(o.ref,o.data);
+      else if(o.type==='merge')batch.set(o.ref,o.data,{merge:true});
+      else batch.delete(o.ref);
+    });
     await batch.commit();
   }
   lastSynced=clone(db);
@@ -837,10 +852,19 @@ function lastArrFor(name){return {documentos:lastSynced.documentos,registros:las
 function applyRemoteDoc(name,data,removed){
   const arr=dbArrFor(name),la=lastArrFor(name);if(!arr)return false;let changed=false;
   const i=arr.findIndex(x=>x.id===data.id);
-  if(removed){if(i>=0){arr.splice(i,1);changed=true;}}
-  else{if(i>=0){if(JSON.stringify(arr[i])!==JSON.stringify(data)){arr[i]=data;changed=true;}}else{arr.push(data);changed=true;}}
   const j=la.findIndex(x=>x.id===data.id);
-  if(removed){if(j>=0)la.splice(j,1);}else{if(j>=0)la[j]=clone(data);else la.push(clone(data));}
+  // "Sucio localmente" = el documento tiene cambios locales aún no sincronizados
+  const localDirty = i>=0 && (j<0 || JSON.stringify(arr[i])!==JSON.stringify(la[j]));
+  if(removed){
+    if(localDirty){ if(j>=0)la.splice(j,1); return false; } // conservar lo local; se re-crea al guardar
+    if(i>=0){arr.splice(i,1);changed=true;}
+    if(j>=0)la.splice(j,1);
+  }else{
+    if(localDirty)return false;   // no sobreescribir una edición local en curso
+    if(i>=0){if(JSON.stringify(arr[i])!==JSON.stringify(data)){arr[i]=data;changed=true;}}
+    else{arr.push(data);changed=true;}
+    if(j>=0)la[j]=clone(data);else la.push(clone(data));
+  }
   return changed;
 }
 function attachRealtime(){
@@ -857,12 +881,17 @@ function attachRealtime(){
   });
   fb.onSnapshot(fb.doc(fb.fdb,'meta','config'),snap=>{
     if(!snap.exists()||snap.metadata.hasPendingWrites)return;
-    const meta=snap.data();
-    db.config=meta.config||db.config;db.config=db.config||{};
+    const meta=snap.data();const rc=meta.config||{};
+    db.config=db.config||{};lastSynced.config=lastSynced.config||{};
+    // Adoptar del remoto SOLO las claves sin edición local pendiente (evita pisar cambios locales aún no guardados)
+    Object.keys(rc).forEach(k=>{
+      const localDirty=JSON.stringify(db.config[k])!==JSON.stringify(lastSynced.config[k]);
+      if(!localDirty){db.config[k]=clone(rc[k]);lastSynced.config[k]=clone(rc[k]);}
+    });
     ['procesos','subprocesos','tiposDocumento','origenes','usuarios','perfiles','clasificaciones','recuperaciones','disposiciones','comites'].forEach(k=>db.config[k]=db.config[k]||[]);
     db.actas=db.actas||[];
-    db.gestion.ccd=meta.ccd||[];db.gestion.trd=meta.trd||[];
-    lastSynced.config=clone(db.config);lastSynced.gestion.ccd=clone(db.gestion.ccd);lastSynced.gestion.trd=clone(db.gestion.trd);
+    if(JSON.stringify(db.gestion.ccd)===JSON.stringify(lastSynced.gestion.ccd)){db.gestion.ccd=meta.ccd||[];lastSynced.gestion.ccd=clone(db.gestion.ccd);}
+    if(JSON.stringify(db.gestion.trd)===JSON.stringify(lastSynced.gestion.trd)){db.gestion.trd=meta.trd||[];lastSynced.gestion.trd=clone(db.gestion.trd);}
     fillListFilters();scheduleRerender();
   },err=>console.error('realtime config',err));
 }
