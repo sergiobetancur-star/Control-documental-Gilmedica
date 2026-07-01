@@ -553,6 +553,9 @@
         <div class="field"><label>Fecha</label><input type="date" id="fh_fecha"></div>
         <div class="field"><label>Hora</label><input type="time" id="fh_hora"></div>
       </div>
+      <div class="fgrid" id="fh_comentarioWrap" style="display:none">
+        <div class="field"><label>Comentario (opcional)</label><textarea id="fh_comentario" style="min-height:70px"></textarea></div>
+      </div>
     </div>
     <div class="ficha-foot" style="justify-content:flex-end">
       <button class="btn" onclick="closeOverlay('overlayFecha')">Cancelar</button>
@@ -1610,14 +1613,31 @@ function renderApprActas(soloMias){
   if(!items.length){tb.innerHTML=`<tr><td colspan="5"><div class="empty">${soloMias?'No tienes actas pendientes de tu firma.':'No hay actas por aprobar.'}</div></td></tr>`;return;}
   tb.innerHTML=items.map(a=>{
     const miPend=currentUser&&(a.asistentes||[]).some(x=>x.userId===currentUser.id&&!(x.firma&&x.firma.fecha));
-    return `<tr class="row-link" onclick="abrirActa('${a.id}')">
+    return `<tr>
       <td class="codecell">${esc(a.numero||'—')}</td>
       <td>${esc(comiteNombre(a.comiteId))||'—'}</td>
       <td>${esc(a.fechaReunion||'')}</td>
       <td>${actaEstadoBadge(a.estado||actaEstadoCalc(a))}${miPend?' <span style="color:#9a6700;font-size:11px">· falta tu firma</span>':''}</td>
-      <td style="text-align:right" onclick="event.stopPropagation()"><button class="btn ok sm" onclick="abrirActa('${a.id}')">Abrir para firmar</button></td>
+      <td style="text-align:right">${miPend?`<button class="btn ok sm" onclick="firmarActaDesdeAprobaciones('${a.id}')">✍ Firmar</button>`:'<span style="color:var(--muted-2);font-size:11px">—</span>'}</td>
     </tr>`;
   }).join('');
+}
+function firmarActaDesdeAprobaciones(actaId){
+  const a=db.actas.find(x=>x.id===actaId);if(!a){toast('Acta no encontrada');return;}
+  if(!currentUser||currentUser.__guest){toast('Debes iniciar sesión');return;}
+  const asis=(a.asistentes||[]).find(x=>x.userId===currentUser.id);
+  if(!asis){toast('No figuras como asistente de esta acta');return;}
+  if(asis.firma&&asis.firma.fecha){toast('Ya registraste tu aprobación');return;}
+  pedirFechaHora('Registrar aprobación'+(a.numero?' · Acta '+a.numero:''),(fecha,hora,comentario)=>{
+    asis.firma={nombre:currentUser.nombre,cargo:currentUser.cargo||'',firmaImg:currentUser.firmaImg||'',firma:currentUser.firma||'',fecha,hora};
+    if(comentario)asis.observaciones=comentario;
+    a.estado=actaEstadoCalc(a);
+    save();
+    logEvent('Firma · acta',`Acta ${a.numero||''} · ${comiteNombre(a.comiteId)}`);
+    renderAprobaciones();
+    const va=document.getElementById('view-actas');if(va&&va.classList.contains('active'))renderActas();
+    toast('Aprobación registrada');
+  },{comentario:true});
 }
 function renderAprobaciones(){
   const tbody=document.getElementById('tbodyAppr');
@@ -1713,19 +1733,23 @@ function firmaDe(u,ts){
 }
 function fechaISO(f){if(!f)return '';const m=String(f).match(/^(\d{2})\/(\d{2})\/(\d{4})$/);return m?`${m[3]}-${m[2]}-${m[1]}`:f;}
 /* Pide fecha y hora manualmente antes de registrar una firma */
-function pedirFechaHora(titulo,cb){
+function pedirFechaHora(titulo,cb,opts){
+  opts=opts||{};
   const d=new Date();
   document.getElementById('fechaTitle').textContent=titulo;
   document.getElementById('fh_fecha').value=d.toISOString().slice(0,10);
   document.getElementById('fh_hora').value=d.toTimeString().slice(0,5);
+  const cw=document.getElementById('fh_comentarioWrap');
+  if(cw){cw.style.display=opts.comentario?'':'none';const ci=document.getElementById('fh_comentario');if(ci)ci.value=opts.comentarioValor||'';}
   const btn=document.getElementById('fh_confirm');
   btn.onclick=()=>{
     const fv=document.getElementById('fh_fecha').value;
     const hv=document.getElementById('fh_hora').value;
     if(!fv||!hv){toast('Indica fecha y hora');return;}
     const [y,m,dd]=fv.split('-');
+    const com=(document.getElementById('fh_comentario')||{}).value||'';
     closeOverlay('overlayFecha');
-    cb(`${dd}/${m}/${y}`,hv);
+    cb(`${dd}/${m}/${y}`,hv,com);
   };
   document.getElementById('overlayFecha').classList.add('open');
 }
@@ -2793,7 +2817,7 @@ function renderActas(){
     <td style="text-align:right" onclick="event.stopPropagation()"><button class="btn danger sm" onclick="eliminarActa('${a.id}')">Eliminar</button></td>
   </tr>`).join('');
 }
-function nuevoActaObj(){return {id:uid(),numero:'',comiteId:'',fechaReunion:'',duracion:'',lugar:'',objetivo:'',link:'',estado:'poraprobar',asistentes:[],tareas:[]};}
+function nuevoActaObj(){return {id:uid(),numero:'',comiteId:'',fechaReunion:'',horaInicio:'',horaFin:'',lugar:'',objetivo:'',link:'',estado:'poraprobar',asistentes:[],tareas:[]};}
 function nuevaActa(){db.config.comites=db.config.comites||[];if(!db.config.comites.length){toast('Primero crea un comité en Datos maestros');return;}abrirActa(null);}
 
 /* Reúne el último estado de cada tarea (por tid) de las actas del comité y devuelve las pendientes */
@@ -2823,10 +2847,11 @@ function actaHTML(a){
       <div class="field"><label>Fecha de reunión</label><input type="date" id="a_fecha" value="${esc(a.fechaReunion||'')}"></div>
     </div>
     <div class="fgrid three">
-      <div class="field"><label>Duración de la reunión</label><input id="a_duracion" value="${esc(a.duracion||'')}" placeholder="Ej. 1 h 30 min"></div>
+      <div class="field"><label>Hora de inicio</label><input type="time" id="a_horaIni" value="${esc(a.horaInicio||'')}"></div>
+      <div class="field"><label>Hora de fin</label><input type="time" id="a_horaFin" value="${esc(a.horaFin||'')}"></div>
       <div class="field"><label>Lugar de reunión</label><input id="a_lugar" value="${esc(a.lugar||'')}"></div>
-      <div class="field"><label>Link del acta</label>${linkRow('a_link',a.link||'','https://… (Drive, PDF, etc.)')}</div>
     </div>
+    <div class="fgrid"><div class="field"><label>Link del acta</label>${linkRow('a_link',a.link||'','https://… (Drive, PDF, etc.)')}</div></div>
     <div class="fgrid"><div class="field"><label>Objetivo o tema principal tratado</label><textarea id="a_objetivo">${esc(a.objetivo||'')}</textarea></div></div>
   </fieldset>
 
@@ -2854,7 +2879,8 @@ function syncActaFromDOM(){
   if(g('a_numero'))d.numero=g('a_numero').value;
   if(g('a_comite'))d.comiteId=g('a_comite').value;
   if(g('a_fecha'))d.fechaReunion=g('a_fecha').value;
-  if(g('a_duracion'))d.duracion=g('a_duracion').value;
+  if(g('a_horaIni'))d.horaInicio=g('a_horaIni').value;
+  if(g('a_horaFin'))d.horaFin=g('a_horaFin').value;
   if(g('a_lugar'))d.lugar=g('a_lugar').value;
   if(g('a_link'))d.link=g('a_link').value;
   if(g('a_objetivo'))d.objetivo=g('a_objetivo').value;
@@ -2925,27 +2951,30 @@ function firmarAsistente(i){
   if(!x.nombre&&!x.userId){toast('Indica el nombre del asistente');return;}
   const puede=(x.userId&&currentUser&&x.userId===currentUser.id)||(!x.userId&&esAdmin());
   if(!puede){toast(x.userId?`Solo ${x.nombre||'esa persona'} puede registrar su firma (iniciando sesión).`:'Solo un administrador puede registrar la firma de un asistente manual.');return;}
-  pedirFechaHora('Registrar aprobación · '+(x.nombre||''),(fecha,hora)=>{
+  pedirFechaHora('Registrar aprobación · '+(x.nombre||''),(fecha,hora,comentario)=>{
     if(x.userId&&currentUser&&x.userId===currentUser.id)
       x.firma={nombre:currentUser.nombre,cargo:currentUser.cargo||'',firmaImg:currentUser.firmaImg||'',firma:currentUser.firma||'',fecha,hora};
     else
       x.firma={nombre:x.nombre,cargo:x.cargo||'',firmaImg:'',firma:'',fecha,hora};
+    if(comentario)x.observaciones=comentario;
     refreshAsis();toast('Aprobación registrada');
-  });
+  },{comentario:true,comentarioValor:x.observaciones||''});
 }
 function quitarFirmaAsistente(i){syncActaFromDOM();syncAsisFromDOM();syncTareasFromDOM();actaCtx.draft.asistentes[i].firma=null;refreshAsis();}
 
 /* ---- Tareas ---- */
+function autoGrow(el){el.style.height='auto';el.style.height=Math.min(240,el.scrollHeight+2)+'px';}
+function filasTexto(t){return Math.min(8,Math.max(2,String(t||'').split('\n').length,Math.ceil(String(t||'').length/40)));}
 function tareasRowsHTML(a){
   const ts=a.tareas||[];
   if(!ts.length)return '<tr><td colspan="6"><div class="empty" style="padding:16px">Sin tareas registradas.</div></td></tr>';
   return ts.map((t,i)=>`<tr>
-    <td><input id="tk_tarea_${i}" value="${esc(t.tarea||'')}"></td>
+    <td><textarea id="tk_tarea_${i}" rows="${filasTexto(t.tarea)}" oninput="autoGrow(this)" style="width:100%;resize:vertical;overflow:hidden;min-height:40px;line-height:1.35">${esc(t.tarea||'')}</textarea></td>
     <td><input id="tk_resp_${i}" value="${esc(t.responsable||'')}"></td>
     <td><input type="date" id="tk_venc_${i}" value="${esc(t.fechaVencimiento||'')}"></td>
     <td><select id="tk_estado_${i}"><option value="pendiente" ${t.estado!=='cerrada'?'selected':''}>Pendiente</option><option value="cerrada" ${t.estado==='cerrada'?'selected':''}>Cerrada</option></select></td>
-    <td><input id="tk_obs_${i}" value="${esc(t.observaciones||'')}"></td>
-    <td style="text-align:right"><button class="btn danger sm" type="button" onclick="quitarTareaActa(${i})">✕</button></td>
+    <td><textarea id="tk_obs_${i}" rows="${filasTexto(t.observaciones)}" oninput="autoGrow(this)" style="width:100%;resize:vertical;overflow:hidden;min-height:40px;line-height:1.35">${esc(t.observaciones||'')}</textarea></td>
+    <td style="text-align:right;vertical-align:top"><button class="btn danger sm" type="button" onclick="quitarTareaActa(${i})">✕</button></td>
   </tr>`).join('');
 }
 function syncTareasFromDOM(){
@@ -2995,7 +3024,7 @@ function solicitarAprobacionActa(){
   const correos=[];
   (d.asistentes||[]).forEach(x=>{if(x.userId&&!(x.firma&&x.firma.fecha)){const u=getUser(x.userId);if(u&&u.correo)correos.push(u.correo);}});
   const para=correos.join(', ');
-  const enlace=location.origin+location.pathname+'?goto=actas';
+  const enlace=location.origin+location.pathname+'?goto=aprobaciones';
   const asunto=`Solicitud de aprobación de acta: ${d.numero||''} - ${comiteNombre(d.comiteId)}`;
   const cuerpo=`Estimados asistentes,
 
@@ -3004,7 +3033,7 @@ Se solicita su aprobación (firma) del acta ${d.numero||''} del comité ${comite
 • Fecha de reunión: ${d.fechaReunion||'—'}
 • Objetivo: ${d.objetivo||'—'}
 
-Ingrese a la sección de Actas para revisar y registrar su aprobación:
+Ingrese a la sección de Aprobaciones para registrar su aprobación:
 ${enlace}
 ${d.link?'\nActa: '+d.link:''}
 
@@ -3053,7 +3082,7 @@ function construirPDFActa(JsPDF,a){
   // Datos
   title('Datos del acta');
   pair('# de acta',a.numero,'Comit\u00e9',comiteNombre(a.comiteId));
-  pair('Fecha de reuni\u00f3n',a.fechaReunion,'Duraci\u00f3n',a.duracion);
+  pair('Fecha de reuni\u00f3n',a.fechaReunion,'Horario',(a.horaInicio||'—')+(a.horaFin?' a '+a.horaFin:''));
   pair('Lugar de reuni\u00f3n',a.lugar,'Estado',estado==='aprobada'?'Aprobada':'Por aprobar');
   full('Objetivo o tema principal tratado',a.objetivo);
   if(a.link)full('Link del acta',a.link);
