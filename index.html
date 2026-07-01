@@ -465,6 +465,20 @@
       </div>
     </div>
 
+    <div class="dcard" style="margin-top:16px">
+      <h3>Respaldo diario automático</h3>
+      <div class="body">
+        <p style="margin:0 0 12px;color:var(--muted);font-size:13px">Descarga automáticamente una copia .json de toda la información una vez al día (la primera vez que un administrador abre la app en este equipo). Es tu respaldo local por si Firestore falla.</p>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;cursor:pointer">
+          <input type="checkbox" id="backupAutoChk" onchange="toggleBackupAuto()"> Activar respaldo diario en este equipo
+        </label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+          <button class="btn" onclick="descargarBackupJSON()">⬇ Descargar respaldo ahora</button>
+        </div>
+        <div id="backupInfo" class="subline" style="margin-top:10px"></div>
+      </div>
+    </div>
+
     <div class="dcard" style="margin-top:16px;border-color:#e7b6b2">
       <h3 style="color:var(--danger)">Mantenimiento de datos de prueba</h3>
       <div class="body">
@@ -2565,7 +2579,7 @@ function enviarCorreoEmailJS(){
    ============================================================ */
 function renderDatos(){
   ['procesos','subprocesos','tiposDocumento','origenes','clasificaciones','recuperaciones','disposiciones'].forEach(renderChips);
-  renderEstados();renderUsuarios();renderPerfiles();renderComites();
+  renderEstados();renderUsuarios();renderPerfiles();renderComites();renderBackupInfo();
   const el=document.getElementById('mantStats');
   if(el)el.textContent=`Actualmente hay ${db.documentos.length} documento(s) y ${db.registros.length} formato(s) registrados.`;
 }
@@ -2769,6 +2783,34 @@ function exportJSON(){
       toast('Descarga bloqueada: se abrió el JSON para guardarlo manualmente');
     }catch(_){toast('No se pudo exportar: '+e.message);}
   }
+}
+/* ---------- Respaldo diario automático (JSON al equipo) ---------- */
+const BK_AUTO='gilmedica_backup_auto', BK_FECHA='gilmedica_backup_fecha';
+function backupAutoActivo(){try{return localStorage.getItem(BK_AUTO)!=='0';}catch(e){return true;}} // activo por defecto
+function toggleBackupAuto(){try{localStorage.setItem(BK_AUTO,document.getElementById('backupAutoChk').checked?'1':'0');}catch(e){}renderBackupInfo();}
+function descargarBackupJSON(){
+  try{
+    const data=JSON.stringify(db,null,2);
+    descargarBlob(new Blob([data],{type:'application/json'}),'Gilmedica_ControlDocumental_backup_'+new Date().toISOString().slice(0,10)+'.json');
+    try{localStorage.setItem(BK_FECHA,new Date().toISOString().slice(0,10));}catch(e){}
+    logEvent&&logEvent('Respaldo JSON descargado','');
+    toast('Respaldo descargado ('+(db.documentos.length+db.registros.length)+' fichas, '+(db.actas?db.actas.length:0)+' actas)');
+    renderBackupInfo();
+  }catch(e){console.error('backup',e);toast('No se pudo descargar el respaldo');}
+}
+function backupDiarioAuto(){
+  if(!esAdmin()||!backupAutoActivo())return;
+  try{
+    const hoy=new Date().toISOString().slice(0,10);
+    if(localStorage.getItem(BK_FECHA)===hoy)return;   // ya se respaldó hoy en este equipo
+    descargarBackupJSON();                            // marca la fecha internamente
+  }catch(e){console.error('backup diario',e);}
+}
+function renderBackupInfo(){
+  const chk=document.getElementById('backupAutoChk');if(chk)chk.checked=backupAutoActivo();
+  const el=document.getElementById('backupInfo');if(!el)return;
+  let last='';try{last=localStorage.getItem(BK_FECHA)||'';}catch(e){}
+  el.textContent=last?('Último respaldo en este equipo: '+last):'Aún no se ha descargado respaldo en este equipo.';
 }
 function importJSON(ev){
   const file=ev.target.files[0];if(!file)return;
@@ -3226,6 +3268,7 @@ window.__onAuth = async function(fbUser){
     const tab=document.querySelector('nav.tabs button.active');
     switchTab(tab?tab.dataset.tab:'documentos');
     abrirDeepLink();
+    setTimeout(backupDiarioAuto,1500);   // respaldo diario automático (una vez al día por equipo)
   }else{
     currentUser=null;
     refreshAuthUI();
