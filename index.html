@@ -261,6 +261,7 @@
   <button data-tab="documentos" class="active" onclick="switchTab('documentos')">Listado maestro de documentos</button>
   <button data-tab="registros" onclick="switchTab('registros')">Listado maestro de registros</button>
   <button data-tab="aprobaciones" onclick="switchTab('aprobaciones')">Aprobaciones</button>
+  <button data-tab="actas" onclick="switchTab('actas')">Actas</button>
   <button data-tab="gestion" onclick="switchTab('gestion')">Gestión documental</button>
   <button data-tab="datos" onclick="switchTab('datos')">Datos maestros</button>
   <button data-tab="log" onclick="switchTab('log')">Log de eventos</button>
@@ -337,6 +338,32 @@
         <tbody id="tbodyAppr"></tbody>
       </table>
     </div>
+    <div class="card" style="margin-top:16px">
+      <h3 style="margin:0 0 4px">Actas pendientes de firma</h3>
+      <p style="margin:0 0 12px;color:var(--muted);font-size:13px">Actas de reunión que requieren tu aprobación (firma).</p>
+      <table>
+        <thead><tr><th style="width:90px"># Acta</th><th>Comité</th><th>Fecha reunión</th><th>Estado</th><th style="text-align:right">Acción</th></tr></thead>
+        <tbody id="tbodyApprActas"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ====== ACTAS ====== -->
+  <section id="view-actas" class="view">
+    <div class="module-head">
+      <div>
+        <h1>Actas</h1>
+        <p>Actas de reunión por comité, con asistentes, firmas de aprobación y tareas.</p>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select id="actasComiteFiltro" onchange="renderActas()" style="min-width:200px"></select>
+        <button class="btn ok" onclick="nuevaActa()">＋ Nueva acta</button>
+      </div>
+    </div>
+    <div class="card"><div style="overflow-x:auto"><table>
+      <thead><tr><th style="width:90px"># Acta</th><th>Comité</th><th>Fecha reunión</th><th>Objetivo / tema</th><th>Estado</th><th style="text-align:right">Acción</th></tr></thead>
+      <tbody id="tbodyActas"></tbody>
+    </table></div></div>
   </section>
 
   <!-- ====== GESTIÓN DOCUMENTAL (Res. 8934/2014 SIC) ====== -->
@@ -373,6 +400,11 @@
       </div>
     </div>
     <div class="grid2">
+      <!-- Comités -->
+      <div class="dcard">
+        <h3>Comités</h3>
+        <div class="body" id="datosComites"></div>
+      </div>
       <!-- Procesos -->
       <div class="dcard">
         <h3>Procesos</h3>
@@ -561,6 +593,31 @@
   </div>
 </div>
 
+<!-- ====== ACTA (modal) ====== -->
+<div class="overlay" id="overlayActa">
+  <div class="ficha" style="max-width:900px">
+    <div class="ficha-head">
+      <div>
+        <h2 id="actaTitle">Acta</h2>
+        <div class="sub" id="actaSub"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span id="actaEstado"></span>
+        <button class="iconbtn" onclick="closeOverlay('overlayActa')">✕</button>
+      </div>
+    </div>
+    <div class="ficha-body" id="actaBody"></div>
+    <div class="ficha-foot">
+      <div id="actaFootLeft"></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="exportarActaPDF()">⬇ PDF</button>
+        <button class="btn" onclick="closeOverlay('overlayActa')">Cancelar</button>
+        <button class="btn primary" onclick="guardarActa()">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ============================================================
    GILMEDICA · CONTROL DOCUMENTAL  (Firestore + tiempo real)
@@ -610,9 +667,11 @@ function seed(){
       clasificaciones:[mk('Público'),mk('Confidencial')],
       recuperaciones:[mk('Cronológica'),mk('Alfabética')],
       disposiciones:[mk('Destrucción'),mk('Archivo muerto')],
+      comites:[],
     },
     documentos:[],
     registros:[],
+    actas:[],
     gestion:{
       dependencias:[{id:uid(),codigo:'100',nombre:'Gerencia General'},{id:uid(),codigo:'200',nombre:'Gestión de Calidad'}],
       series:[],subseries:[],ccd:[],trd:[],tvd:[]
@@ -627,8 +686,9 @@ function clone(o){return JSON.parse(JSON.stringify(o));}
 /* Normalizaciones y migraciones sobre el objeto db (en memoria) */
 function migrate(){
   db.config = db.config||{};
-  ['procesos','subprocesos','tiposDocumento','origenes','usuarios','perfiles','clasificaciones','recuperaciones','disposiciones']
+  ['procesos','subprocesos','tiposDocumento','origenes','usuarios','perfiles','clasificaciones','recuperaciones','disposiciones','comites']
     .forEach(k=>db.config[k]=db.config[k]||[]);
+  db.actas=db.actas||[];
   // Migración: si existen subprocesos anidados en procesos, se aplanan a lista independiente
   db.config.procesos.forEach(p=>{
     if(p.subprocesos){p.subprocesos.forEach(s=>db.config.subprocesos.push({id:s.id,nombre:s.nombre}));delete p.subprocesos;}
@@ -653,8 +713,14 @@ function migrate(){
 /* Lee una colección de Firestore y la devuelve como arreglo */
 async function readColl(name){
   const fb=window.FB;
-  const snap=await fb.getDocs(fb.collection(fb.fdb,name));
-  const arr=[];snap.forEach(d=>arr.push(d.data()));return arr;
+  try{
+    const snap=await fb.getDocs(fb.collection(fb.fdb,name));
+    const arr=[];snap.forEach(d=>arr.push(d.data()));return arr;
+  }catch(e){
+    console.error('No se pudo leer la colección "'+name+'":',e);
+    toast&&toast('Aviso: no se pudo leer "'+name+'". Revisa las reglas de Firestore.');
+    return [];
+  }
 }
 
 /* Carga el estado desde Firestore. Si la base está vacía, siembra los valores por defecto. */
@@ -675,6 +741,7 @@ async function load(){
     config: meta.config||{},
     documentos: await readColl('documentos'),
     registros: await readColl('registros'),
+    actas: await readColl('actas'),
     gestion:{
       dependencias: await readColl('dependencias'),
       series: await readColl('series'),
@@ -687,7 +754,7 @@ async function load(){
   lastSynced=clone(db);
   lastSavedSnapshot=JSON.stringify(db);
 }
-function emptyState(){return {config:{},documentos:[],registros:[],gestion:{dependencias:[],series:[],subseries:[],tvd:[],ccd:[],trd:[]}};}
+function emptyState(){return {config:{},documentos:[],registros:[],actas:[],gestion:{dependencias:[],series:[],subseries:[],tvd:[],ccd:[],trd:[]}};}
 /* ---------- Deshacer / Rehacer (undo/redo) ---------- */
 let undoStack=[];
 let redoStack=[];
@@ -733,6 +800,7 @@ async function persistDiff(){
   const ops=[];
   collOps(ops,'documentos',db.documentos,lastSynced.documentos);
   collOps(ops,'registros',db.registros,lastSynced.registros);
+  collOps(ops,'actas',db.actas,lastSynced.actas);
   collOps(ops,'series',db.gestion.series,lastSynced.gestion.series);
   collOps(ops,'subseries',db.gestion.subseries,lastSynced.gestion.subseries);
   collOps(ops,'dependencias',db.gestion.dependencias,lastSynced.gestion.dependencias);
@@ -760,8 +828,8 @@ function scheduleRerender(){
     if(tab)switchTab(tab.dataset.tab);
   },300);
 }
-function dbArrFor(name){return {documentos:db.documentos,registros:db.registros,series:db.gestion.series,subseries:db.gestion.subseries,dependencias:db.gestion.dependencias,tvd:db.gestion.tvd}[name];}
-function lastArrFor(name){return {documentos:lastSynced.documentos,registros:lastSynced.registros,series:lastSynced.gestion.series,subseries:lastSynced.gestion.subseries,dependencias:lastSynced.gestion.dependencias,tvd:lastSynced.gestion.tvd}[name];}
+function dbArrFor(name){return {documentos:db.documentos,registros:db.registros,actas:db.actas,series:db.gestion.series,subseries:db.gestion.subseries,dependencias:db.gestion.dependencias,tvd:db.gestion.tvd}[name];}
+function lastArrFor(name){return {documentos:lastSynced.documentos,registros:lastSynced.registros,actas:lastSynced.actas,series:lastSynced.gestion.series,subseries:lastSynced.gestion.subseries,dependencias:lastSynced.gestion.dependencias,tvd:lastSynced.gestion.tvd}[name];}
 function applyRemoteDoc(name,data,removed){
   const arr=dbArrFor(name),la=lastArrFor(name);if(!arr)return false;let changed=false;
   const i=arr.findIndex(x=>x.id===data.id);
@@ -773,7 +841,7 @@ function applyRemoteDoc(name,data,removed){
 }
 function attachRealtime(){
   if(realtimeOn)return;const fb=window.FB;if(!fb||!fb.onSnapshot)return;realtimeOn=true;
-  ['documentos','registros','series','subseries','dependencias','tvd'].forEach(name=>{
+  ['documentos','registros','actas','series','subseries','dependencias','tvd'].forEach(name=>{
     fb.onSnapshot(fb.collection(fb.fdb,name),snap=>{
       let changed=false;
       snap.docChanges().forEach(ch=>{
@@ -968,6 +1036,7 @@ function switchTab(tab){
   if(tab==='documentos')renderDocumentos();
   if(tab==='registros')renderRegistros();
   if(tab==='aprobaciones')renderAprobaciones();
+  if(tab==='actas')renderActas();
   if(tab==='gestion')renderGestion();
   if(tab==='datos')renderDatos();
   if(tab==='log')renderLog();
@@ -1056,6 +1125,8 @@ function gdModal(titulo,sub,fields,draft,onSave,onDelete){
 }
 function gdField(f,v){
   const id='gd_'+f.k;
+  if(f.type==='usuarios'){const sel=v||[];
+    return `<div class="field" style="margin-bottom:14px"><label>${esc(f.h)}</label><div class="gd-users" id="${id}" style="max-height:210px;overflow:auto;border:1px solid var(--border);border-radius:8px;padding:8px">${db.config.usuarios.map(u=>`<label style="display:flex;align-items:center;gap:8px;font-size:13px;padding:3px 2px"><input type="checkbox" value="${u.id}" ${sel.includes(u.id)?'checked':''}> ${esc(u.nombre)}${u.cargo?' \u00b7 '+esc(u.cargo):''}</label>`).join('')||'<span style="color:var(--muted-2);font-size:12px">No hay usuarios. Créalos primero en Usuarios.</span>'}</div></div>`;}
   if(f.type==='select')
     return `<div class="field" style="margin-bottom:14px"><label>${esc(f.h)}</label><select id="${id}">${opt(f.options,v,f.ph||'\u2014 seleccionar \u2014')}</select></div>`;
   if(f.type==='textarea')
@@ -1079,6 +1150,7 @@ function gdGuardar(){
   const d=gdCtx.draft;
   gdCtx.fields.forEach(f=>{const id='gd_'+f.k;
     if(f.type==='disp')d[f.k]={ct:document.getElementById(id+'_ct').checked,e:document.getElementById(id+'_e').checked,m:document.getElementById(id+'_m').checked,s:document.getElementById(id+'_s').checked};
+    else if(f.type==='usuarios')d[f.k]=Array.from(document.querySelectorAll('#'+id+' input:checked')).map(x=>x.value);
     else if(f.type==='lines')d[f.k]=val(id).split('\n').map(x=>x.trim()).filter(Boolean);
     else d[f.k]=val(id);});
   gdSaveCb(d);
@@ -1525,6 +1597,25 @@ function renderRegistros(){renderLista('registro');}
    APROBACIONES
    ============================================================ */
 function respDelPaso(d){return d.estado==='elaboracion'?d.responsableElaborar:d.estado==='revision'?d.responsableRevisar:d.estado==='aprobacion'?d.responsableAprobar:'';}
+function renderApprActas(soloMias){
+  const tb=document.getElementById('tbodyApprActas');if(!tb)return;
+  let items=(db.actas||[]).filter(a=>(a.estado||actaEstadoCalc(a))==='poraprobar');
+  if(soloMias&&currentUser){
+    items=items.filter(a=>(a.asistentes||[]).some(x=>x.userId===currentUser.id&&!(x.firma&&x.firma.fecha)));
+  }
+  items.sort((a,b)=>String(b.fechaReunion||'').localeCompare(String(a.fechaReunion||'')));
+  if(!items.length){tb.innerHTML=`<tr><td colspan="5"><div class="empty">${soloMias?'No tienes actas pendientes de tu firma.':'No hay actas por aprobar.'}</div></td></tr>`;return;}
+  tb.innerHTML=items.map(a=>{
+    const miPend=currentUser&&(a.asistentes||[]).some(x=>x.userId===currentUser.id&&!(x.firma&&x.firma.fecha));
+    return `<tr class="row-link" onclick="abrirActa('${a.id}')">
+      <td class="codecell">${esc(a.numero||'—')}</td>
+      <td>${esc(comiteNombre(a.comiteId))||'—'}</td>
+      <td>${esc(a.fechaReunion||'')}</td>
+      <td>${actaEstadoBadge(a.estado||actaEstadoCalc(a))}${miPend?' <span style="color:#9a6700;font-size:11px">· falta tu firma</span>':''}</td>
+      <td style="text-align:right" onclick="event.stopPropagation()"><button class="btn ok sm" onclick="abrirActa('${a.id}')">Abrir para firmar</button></td>
+    </tr>`;
+  }).join('');
+}
 function renderAprobaciones(){
   const tbody=document.getElementById('tbodyAppr');
   const chk=document.getElementById('apprSoloMias');
@@ -1532,6 +1623,7 @@ function renderAprobaciones(){
   // Los administradores ven todo; los demás solo lo suyo (toggle forzado)
   if(chk){chk.disabled=!admin; if(!admin)chk.checked=true;}
   const soloMias = chk ? chk.checked : !admin;
+  renderApprActas(soloMias);
   let items=[
     ...db.documentos.map(d=>({...d,_tipo:'documento'})),
     ...db.registros.map(d=>({...d,_tipo:'registro'})),
@@ -2414,7 +2506,7 @@ function enviarCorreoEmailJS(){
    ============================================================ */
 function renderDatos(){
   ['procesos','subprocesos','tiposDocumento','origenes','clasificaciones','recuperaciones','disposiciones'].forEach(renderChips);
-  renderEstados();renderUsuarios();renderPerfiles();
+  renderEstados();renderUsuarios();renderPerfiles();renderComites();
   const el=document.getElementById('mantStats');
   if(el)el.textContent=`Actualmente hay ${db.documentos.length} documento(s) y ${db.registros.length} formato(s) registrados.`;
 }
@@ -2641,11 +2733,359 @@ function importJSON(ev){
 }
 
 /* ---------- cierre con clic en overlay ---------- */
-['overlayFicha','overlayMail','overlayFecha','overlayConfirm','overlayGD'].forEach(idov=>{
+['overlayFicha','overlayMail','overlayFecha','overlayConfirm','overlayGD','overlayActa'].forEach(idov=>{
   const ov=document.getElementById(idov);
   ov.addEventListener('mousedown',e=>{if(e.target===ov)ov.classList.remove('open');});
 });
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeOverlay('overlayFicha');closeOverlay('overlayMail');closeOverlay('overlayFecha');closeOverlay('overlayConfirm');closeOverlay('overlayGD');}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeOverlay('overlayFicha');closeOverlay('overlayMail');closeOverlay('overlayFecha');closeOverlay('overlayConfirm');closeOverlay('overlayGD');closeOverlay('overlayActa');}});
+
+/* ============================================================
+   MÓDULO ACTAS + COMITÉS
+   ============================================================ */
+let actaCtx=null;
+function comiteById(id){return db.config.comites.find(c=>c.id===id);}
+function comiteNombre(id){const c=comiteById(id);return c?c.nombre:'';}
+
+/* ---- Comités (Datos maestros) ---- */
+function renderComites(){
+  const cont=document.getElementById('datosComites');if(!cont)return;
+  const cs=db.config.comites;
+  cont.innerHTML=`<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="btn ok sm" onclick="nuevoComite()">＋ Nuevo comité</button></div>
+    ${cs.length?cs.map(c=>`<div class="chip" style="border-radius:8px;justify-content:space-between;width:100%;margin-bottom:6px;padding:8px 10px">
+        <span><strong>${esc(c.nombre)}</strong> <span style="color:var(--muted-2);font-size:11px">(${(c.participantes||[]).length} participante(s))</span></span>
+        <span style="display:flex;gap:4px"><button class="ed" title="Editar" onclick="editComite('${c.id}')">✎</button><button title="Eliminar" onclick="delComite('${c.id}')">✕</button></span>
+      </div>`).join(''):'<div style="color:var(--muted-2);font-size:12.5px">Sin comités. Crea el primero.</div>'}`;
+}
+function comiteFields(){return [{k:'nombre',h:'Nombre del comité',type:'text'},{k:'participantes',h:'Participantes',type:'usuarios'}];}
+function nuevoComite(){gdModal('Nuevo comité','Selecciona los participantes',comiteFields(),{id:uid(),nombre:'',participantes:[]},guardarComite);}
+function editComite(id){const c=comiteById(id);gdModal('Editar comité','',comiteFields(),JSON.parse(JSON.stringify(c)),guardarComite,()=>delComite(id));}
+function guardarComite(d){if(!d.nombre){toast('El nombre del comité es obligatorio');return;}const a=db.config.comites;const i=a.findIndex(x=>x.id===d.id);i>=0?a[i]=d:a.push(d);save();closeOverlay('overlayGD');renderComites();toast('Comité guardado');}
+function delComite(id){pedirConfirmacion('Eliminar comité','¿Eliminar este comité?\n\nPodrás revertirlo con «Deshacer».',()=>{db.config.comites=db.config.comites.filter(x=>x.id!==id);save();closeOverlay('overlayGD');renderComites();toast('Comité eliminado');},'Eliminar');}
+
+/* ---- Estado del acta (derivado de las firmas) ---- */
+function actaEstadoCalc(a){const asis=a.asistentes||[];return (asis.length && asis.every(x=>x.firma&&x.firma.fecha))?'aprobada':'poraprobar';}
+function actaEstadoBadge(e){return e==='aprobada'?'<span class="badge badge-verde">Aprobada</span>':'<span class="badge badge-amarillo">Por aprobar</span>';}
+
+/* ---- Listado de actas ---- */
+function fillActasComiteFiltro(){
+  const sel=document.getElementById('actasComiteFiltro');if(!sel)return;const cur=sel.value;
+  sel.innerHTML='<option value="">Todos los comités</option>'+db.config.comites.map(c=>`<option value="${c.id}">${esc(c.nombre)}</option>`).join('');
+  sel.value=cur||'';
+}
+function renderActas(){
+  fillActasComiteFiltro();
+  const filtro=(document.getElementById('actasComiteFiltro')||{}).value||'';
+  const tb=document.getElementById('tbodyActas');if(!tb)return;
+  let items=db.actas.slice();
+  if(filtro)items=items.filter(a=>a.comiteId===filtro);
+  items.sort((a,b)=>String(b.fechaReunion||'').localeCompare(String(a.fechaReunion||'')));
+  if(!items.length){tb.innerHTML='<tr><td colspan="6"><div class="empty"><div class="big">Sin actas</div>Crea la primera con «Nueva acta».</div></td></tr>';return;}
+  tb.innerHTML=items.map(a=>`<tr class="row-link" onclick="abrirActa('${a.id}')">
+    <td class="codecell">${esc(a.numero||'—')}</td>
+    <td>${esc(comiteNombre(a.comiteId))||'—'}</td>
+    <td>${esc(a.fechaReunion||'')}</td>
+    <td>${esc(a.objetivo||'')}</td>
+    <td>${actaEstadoBadge(a.estado||actaEstadoCalc(a))}</td>
+    <td style="text-align:right" onclick="event.stopPropagation()"><button class="btn danger sm" onclick="eliminarActa('${a.id}')">Eliminar</button></td>
+  </tr>`).join('');
+}
+function nuevoActaObj(){return {id:uid(),numero:'',comiteId:'',fechaReunion:'',duracion:'',lugar:'',objetivo:'',link:'',estado:'poraprobar',asistentes:[],tareas:[]};}
+function nuevaActa(){if(!db.config.comites.length){toast('Primero crea un comité en Datos maestros');return;}abrirActa(null);}
+
+/* Reúne el último estado de cada tarea (por tid) de las actas del comité y devuelve las pendientes */
+function tareasPendientesDeComite(comiteId){
+  const map={};
+  db.actas.filter(a=>a.comiteId===comiteId).forEach(a=>{(a.tareas||[]).forEach(t=>{map[t.tid]=t;});});
+  return Object.values(map).filter(t=>t.estado==='pendiente').map(t=>JSON.parse(JSON.stringify(t)));
+}
+
+/* ---- Ficha de acta ---- */
+function abrirActa(id){
+  const base=id?JSON.parse(JSON.stringify(db.actas.find(a=>a.id===id))):nuevoActaObj();
+  actaCtx={id,draft:base};
+  document.getElementById('actaTitle').textContent=id?('Acta '+(base.numero||'')):'Nueva acta';
+  document.getElementById('actaSub').textContent=id?comiteNombre(base.comiteId):'Complete los datos del acta.';
+  document.getElementById('actaEstado').innerHTML=actaEstadoBadge(base.estado||actaEstadoCalc(base));
+  document.getElementById('actaFootLeft').innerHTML=id?`<button class="btn danger" onclick="eliminarActa('${id}',true)">🗑 Eliminar</button>`:'';
+  document.getElementById('actaBody').innerHTML=actaHTML(base);
+  document.getElementById('overlayActa').classList.add('open');
+}
+function actaHTML(a){
+  return `
+  <fieldset class="section"><legend>Datos del acta</legend>
+    <div class="fgrid three">
+      <div class="field"><label># de acta</label><input id="a_numero" value="${esc(a.numero||'')}"></div>
+      <div class="field"><label>Comité</label><select id="a_comite" onchange="onActaComiteChange()">${opt(db.config.comites,a.comiteId,'— comité —')}</select></div>
+      <div class="field"><label>Fecha de reunión</label><input type="date" id="a_fecha" value="${esc(a.fechaReunion||'')}"></div>
+    </div>
+    <div class="fgrid three">
+      <div class="field"><label>Duración de la reunión</label><input id="a_duracion" value="${esc(a.duracion||'')}" placeholder="Ej. 1 h 30 min"></div>
+      <div class="field"><label>Lugar de reunión</label><input id="a_lugar" value="${esc(a.lugar||'')}"></div>
+      <div class="field"><label>Link del acta</label>${linkRow('a_link',a.link||'','https://… (Drive, PDF, etc.)')}</div>
+    </div>
+    <div class="fgrid"><div class="field"><label>Objetivo o tema principal tratado</label><textarea id="a_objetivo">${esc(a.objetivo||'')}</textarea></div></div>
+  </fieldset>
+
+  <fieldset class="section"><legend>Asistentes y aprobación</legend>
+    <div class="pill-actions" style="margin-bottom:10px">
+      <button class="btn sm" type="button" onclick="cargarParticipantesComite()">↧ Traer participantes del comité</button>
+      <button class="btn sm" type="button" onclick="agregarAsistenteManual()">＋ Agregar asistente</button>
+      <button class="btn sm" type="button" onclick="solicitarAprobacionActa()">✉ Solicitar aprobación</button>
+    </div>
+    <div id="asisList">${asistentesHTML(a)}</div>
+  </fieldset>
+
+  <fieldset class="section"><legend>Tareas / compromisos</legend>
+    <div class="pill-actions" style="margin-bottom:10px"><button class="btn sm" type="button" onclick="agregarTareaActa()">＋ Agregar tarea</button></div>
+    <div style="overflow-x:auto"><table id="tareasTable"><thead><tr>
+      <th>Tarea</th><th style="width:150px">Responsable</th><th style="width:140px">Vence</th><th style="width:120px">Estado</th><th>Observaciones</th><th style="width:36px"></th>
+    </tr></thead><tbody>${tareasRowsHTML(a)}</tbody></table></div>
+    <div style="font-size:11.5px;color:var(--muted);margin-top:6px">Las tareas pendientes se copian automáticamente al crear una nueva acta del comité. Al cambiar el estado u observaciones de una tarea, se actualiza en todas las actas donde aparezca.</div>
+  </fieldset>`;
+}
+
+/* ---- Lectura de campos hacia el borrador ---- */
+function syncActaFromDOM(){
+  const d=actaCtx.draft,g=id=>document.getElementById(id);
+  if(g('a_numero'))d.numero=g('a_numero').value;
+  if(g('a_comite'))d.comiteId=g('a_comite').value;
+  if(g('a_fecha'))d.fechaReunion=g('a_fecha').value;
+  if(g('a_duracion'))d.duracion=g('a_duracion').value;
+  if(g('a_lugar'))d.lugar=g('a_lugar').value;
+  if(g('a_link'))d.link=g('a_link').value;
+  if(g('a_objetivo'))d.objetivo=g('a_objetivo').value;
+}
+function onActaComiteChange(){
+  syncActaFromDOM();syncAsisFromDOM();syncTareasFromDOM();
+  const d=actaCtx.draft;
+  if(!actaCtx.id){
+    const c=comiteById(d.comiteId);
+    d.asistentes=[];
+    if(c)(c.participantes||[]).forEach(up=>{const u=getUser(up);if(u)d.asistentes.push({id:uid(),nombre:u.nombre,cargo:u.cargo||'',userId:up,firma:null});});
+    d.tareas=tareasPendientesDeComite(d.comiteId);
+  }
+  document.getElementById('actaBody').innerHTML=actaHTML(d);
+  actualizarEstadoActaBadge();
+}
+
+/* ---- Asistentes ---- */
+function asistentesHTML(a){
+  const asis=a.asistentes||[];
+  if(!asis.length)return '<div style="color:var(--muted-2);font-size:12.5px">Sin asistentes. Usa «Traer participantes del comité» o «Agregar asistente».</div>';
+  return `<table><thead><tr><th>Asistente</th><th style="width:150px">Cargo</th><th style="min-width:150px">Observaciones</th><th style="width:170px">Firma de aprobación</th><th style="width:140px"></th></tr></thead><tbody>${asis.map((x,i)=>{
+    const firmado=x.firma&&x.firma.fecha;
+    const nombreCell = x.userId
+      ? esc(x.nombre||'')
+      : `<select id="asis_user_${i}" onchange="onAsisUserChange(${i})" style="width:100%;margin-bottom:4px"><option value="">— manual —</option>${db.config.usuarios.map(u=>`<option value="${u.id}" ${x.userId===u.id?'selected':''}>${esc(u.nombre)}</option>`).join('')}</select><input id="asis_nom_${i}" value="${esc(x.nombre||'')}" placeholder="Nombre">`;
+    const cargoCell = x.userId ? esc(x.cargo||'') : `<input id="asis_cargo_${i}" value="${esc(x.cargo||'')}" placeholder="Cargo">`;
+    return `<tr>
+      <td>${nombreCell}${x.userId?'':' <span style="color:var(--muted-2);font-size:10px">(manual)</span>'}</td>
+      <td>${cargoCell}</td>
+      <td><input id="asis_obs_${i}" value="${esc(x.observaciones||'')}" placeholder="Observaciones (opcional)"></td>
+      <td>${firmado?`${x.firma.firmaImg?`<img src="${x.firma.firmaImg}" style="max-height:32px;background:#fff;display:block;margin-bottom:2px">`:''}<span style="color:#0a7d4d;font-size:11.5px">✓ ${esc(x.firma.fecha)} ${esc(x.firma.hora||'')}</span>`:'<span class="pub-no" style="font-size:11.5px">Pendiente</span>'}</td>
+      <td style="text-align:right">
+        ${firmado?`<button class="btn sm" type="button" onclick="quitarFirmaAsistente(${i})">Quitar firma</button>`:`<button class="btn ok sm" type="button" onclick="firmarAsistente(${i})">Firmar</button>`}
+        <button class="btn danger sm" type="button" onclick="quitarAsistente(${i})">✕</button>
+      </td></tr>`;
+  }).join('')}</tbody></table>`;
+}
+function syncAsisFromDOM(){
+  const asis=actaCtx.draft.asistentes||[];
+  asis.forEach((x,i)=>{
+    const obs=document.getElementById('asis_obs_'+i);
+    if(obs)x.observaciones=obs.value;
+    const us=document.getElementById('asis_user_'+i);
+    if(us){
+      if(us.value){const u=getUser(us.value);x.userId=us.value;x.nombre=u?u.nombre:'';x.cargo=u?(u.cargo||''):'';}
+      else{x.userId='';const n=document.getElementById('asis_nom_'+i),c=document.getElementById('asis_cargo_'+i);if(n)x.nombre=n.value;if(c)x.cargo=c.value;}
+    }
+  });
+}
+function onAsisUserChange(i){syncActaFromDOM();syncAsisFromDOM();refreshAsis();}
+function refreshAsis(){document.getElementById('asisList').innerHTML=asistentesHTML(actaCtx.draft);actualizarEstadoActaBadge();}
+function actualizarEstadoActaBadge(){const e=actaEstadoCalc(actaCtx.draft);actaCtx.draft.estado=e;const el=document.getElementById('actaEstado');if(el)el.innerHTML=actaEstadoBadge(e);}
+function cargarParticipantesComite(){
+  syncActaFromDOM();syncAsisFromDOM();syncTareasFromDOM();
+  const c=comiteById(actaCtx.draft.comiteId);
+  if(!c){toast('Selecciona un comité primero');return;}
+  const asis=actaCtx.draft.asistentes;
+  let n=0;
+  (c.participantes||[]).forEach(up=>{const u=getUser(up);if(!u)return;if(asis.some(x=>x.userId===up))return;asis.push({id:uid(),nombre:u.nombre,cargo:u.cargo||'',userId:up,firma:null});n++;});
+  refreshAsis();toast(n?`${n} participante(s) agregado(s)`:'Ya estaban todos los participantes');
+}
+function agregarAsistenteManual(){syncActaFromDOM();syncAsisFromDOM();syncTareasFromDOM();actaCtx.draft.asistentes.push({id:uid(),nombre:'',cargo:'',userId:'',firma:null});refreshAsis();}
+function quitarAsistente(i){syncActaFromDOM();syncAsisFromDOM();syncTareasFromDOM();actaCtx.draft.asistentes.splice(i,1);refreshAsis();}
+function firmarAsistente(i){
+  syncActaFromDOM();syncAsisFromDOM();syncTareasFromDOM();
+  const x=actaCtx.draft.asistentes[i];
+  if(!x.nombre&&!x.userId){toast('Indica el nombre del asistente');return;}
+  const puede=(x.userId&&currentUser&&x.userId===currentUser.id)||(!x.userId&&esAdmin());
+  if(!puede){toast(x.userId?`Solo ${x.nombre||'esa persona'} puede registrar su firma (iniciando sesión).`:'Solo un administrador puede registrar la firma de un asistente manual.');return;}
+  pedirFechaHora('Registrar aprobación · '+(x.nombre||''),(fecha,hora)=>{
+    if(x.userId&&currentUser&&x.userId===currentUser.id)
+      x.firma={nombre:currentUser.nombre,cargo:currentUser.cargo||'',firmaImg:currentUser.firmaImg||'',firma:currentUser.firma||'',fecha,hora};
+    else
+      x.firma={nombre:x.nombre,cargo:x.cargo||'',firmaImg:'',firma:'',fecha,hora};
+    refreshAsis();toast('Aprobación registrada');
+  });
+}
+function quitarFirmaAsistente(i){syncActaFromDOM();syncAsisFromDOM();syncTareasFromDOM();actaCtx.draft.asistentes[i].firma=null;refreshAsis();}
+
+/* ---- Tareas ---- */
+function tareasRowsHTML(a){
+  const ts=a.tareas||[];
+  if(!ts.length)return '<tr><td colspan="6"><div class="empty" style="padding:16px">Sin tareas registradas.</div></td></tr>';
+  return ts.map((t,i)=>`<tr>
+    <td><input id="tk_tarea_${i}" value="${esc(t.tarea||'')}"></td>
+    <td><input id="tk_resp_${i}" value="${esc(t.responsable||'')}"></td>
+    <td><input type="date" id="tk_venc_${i}" value="${esc(t.fechaVencimiento||'')}"></td>
+    <td><select id="tk_estado_${i}"><option value="pendiente" ${t.estado!=='cerrada'?'selected':''}>Pendiente</option><option value="cerrada" ${t.estado==='cerrada'?'selected':''}>Cerrada</option></select></td>
+    <td><input id="tk_obs_${i}" value="${esc(t.observaciones||'')}"></td>
+    <td style="text-align:right"><button class="btn danger sm" type="button" onclick="quitarTareaActa(${i})">✕</button></td>
+  </tr>`).join('');
+}
+function syncTareasFromDOM(){
+  const ts=actaCtx.draft.tareas||[],g=id=>document.getElementById(id);
+  ts.forEach((t,i)=>{
+    if(g('tk_tarea_'+i))t.tarea=g('tk_tarea_'+i).value;
+    if(g('tk_resp_'+i))t.responsable=g('tk_resp_'+i).value;
+    if(g('tk_venc_'+i))t.fechaVencimiento=g('tk_venc_'+i).value;
+    if(g('tk_estado_'+i))t.estado=g('tk_estado_'+i).value;
+    if(g('tk_obs_'+i))t.observaciones=g('tk_obs_'+i).value;
+  });
+}
+function agregarTareaActa(){syncActaFromDOM();syncAsisFromDOM();syncTareasFromDOM();actaCtx.draft.tareas.push({tid:uid(),tarea:'',responsable:'',fechaVencimiento:'',estado:'pendiente',observaciones:''});document.querySelector('#tareasTable tbody').innerHTML=tareasRowsHTML(actaCtx.draft);}
+function quitarTareaActa(i){syncActaFromDOM();syncAsisFromDOM();syncTareasFromDOM();actaCtx.draft.tareas.splice(i,1);document.querySelector('#tareasTable tbody').innerHTML=tareasRowsHTML(actaCtx.draft);}
+
+/* Propaga las tareas (por tid) a todas las demás actas donde aparezcan */
+function propagarTareas(acta){
+  const map={};(acta.tareas||[]).forEach(t=>{map[t.tid]=t;});
+  db.actas.forEach(a=>{if(a.id===acta.id)return;(a.tareas||[]).forEach((t,i)=>{if(map[t.tid])a.tareas[i]=JSON.parse(JSON.stringify(map[t.tid]));});});
+}
+function guardarActa(){
+  syncActaFromDOM();syncAsisFromDOM();syncTareasFromDOM();
+  const d=actaCtx.draft;
+  if(!d.numero){toast('Indica el número de acta');return;}
+  if(!d.comiteId){toast('Selecciona el comité');return;}
+  d.estado=actaEstadoCalc(d);
+  propagarTareas(d);
+  const idx=db.actas.findIndex(x=>x.id===d.id);
+  const esNuevo=idx<0;
+  if(idx>=0)db.actas[idx]=d;else db.actas.push(d);
+  save();closeOverlay('overlayActa');
+  logEvent(esNuevo?'Creó acta':'Editó acta',`Acta ${d.numero} · ${comiteNombre(d.comiteId)} · ${d.estado==='aprobada'?'Aprobada':'Por aprobar'}`);
+  renderActas();toast('Acta guardada');
+}
+function eliminarActa(id,desdeModal){
+  pedirConfirmacion('Eliminar acta','¿Eliminar esta acta?\n\nPodrás revertirlo con «Deshacer».',()=>{
+    const a=db.actas.find(x=>x.id===id);
+    db.actas=db.actas.filter(x=>x.id!==id);save();
+    if(desdeModal)closeOverlay('overlayActa');
+    renderActas();logEvent('Eliminó acta',a?`Acta ${a.numero} · ${comiteNombre(a.comiteId)}`:'');toast('Acta eliminada');
+  },'Eliminar');
+}
+/* ---- Solicitud de aprobación del acta por correo ---- */
+function solicitarAprobacionActa(){
+  syncActaFromDOM();syncAsisFromDOM();syncTareasFromDOM();
+  const d=actaCtx.draft;
+  const correos=[];
+  (d.asistentes||[]).forEach(x=>{if(x.userId&&!(x.firma&&x.firma.fecha)){const u=getUser(x.userId);if(u&&u.correo)correos.push(u.correo);}});
+  const para=correos.join(', ');
+  const enlace=location.origin+location.pathname+'?goto=actas';
+  const asunto=`Solicitud de aprobación de acta: ${d.numero||''} - ${comiteNombre(d.comiteId)}`;
+  const cuerpo=`Estimados asistentes,
+
+Se solicita su aprobación (firma) del acta ${d.numero||''} del comité ${comiteNombre(d.comiteId)}.
+
+• Fecha de reunión: ${d.fechaReunion||'—'}
+• Objetivo: ${d.objetivo||'—'}
+
+Ingrese a la sección de Actas para revisar y registrar su aprobación:
+${enlace}
+${d.link?'\nActa: '+d.link:''}
+
+Gracias,
+Sistema de Gestión de Calidad · Gilmedica S.A.S.`;
+  mailCtx={para,asunto,cuerpo,enlace,nombreResp:'asistentes',rol:'aprobación de acta',d:{codigo:d.numero,nombre:comiteNombre(d.comiteId),version:''},tipo:'acta',id:d.id};
+  document.getElementById('mailBody').innerHTML=`
+    <div class="field"><label>Para</label><input value="${esc(para)}" readonly style="width:100%;padding:8px 11px;border:1px solid var(--border-strong);border-radius:8px"></div>
+    <div class="field" style="margin-top:10px"><label>Asunto</label><input value="${esc(asunto)}" readonly style="width:100%;padding:8px 11px;border:1px solid var(--border-strong);border-radius:8px"></div>
+    <div class="field" style="margin-top:10px"><label>Mensaje</label><textarea readonly style="width:100%;min-height:170px;padding:8px 11px;border:1px solid var(--border-strong);border-radius:8px">${esc(cuerpo)}</textarea></div>
+    ${!para?'<div class="note" style="margin-top:12px;color:var(--danger);border-color:#e7b6b2;background:var(--danger-bg)">Ningún asistente pendiente tiene correo registrado (o ya firmaron).</div>':''}`;
+  document.getElementById('mailtoLink').href=`mailto:${encodeURIComponent(para)}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
+  const sendBtn=document.getElementById('emailSendBtn');if(sendBtn)sendBtn.style.display=(emailjsConfigurado()&&para)?'':'none';
+  document.getElementById('overlayActa').classList.remove('open');
+  document.getElementById('overlayMail').classList.add('open');
+}
+
+/* ---- Exportar acta a PDF ---- */
+function exportarActaPDF(){
+  if(!actaCtx){toast('Abre un acta primero');return;}
+  syncActaFromDOM();syncAsisFromDOM();syncTareasFromDOM();
+  toast('Generando PDF…');
+  loadJsPDF().then(JsPDF=>construirPDFActa(JsPDF,actaCtx.draft)).catch(()=>toast('No se pudo generar el PDF (sin conexión).'));
+}
+function construirPDFActa(JsPDF,a){
+  const doc=new JsPDF({unit:'mm',format:'a4'});
+  const M=14,PW=210,PH=297,CW=PW-2*M,GAP=8;let y=M;
+  const ensure=h=>{if(y+h>PH-M){doc.addPage();y=M;}};
+  const setLbl=()=>{doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(120,128,140);};
+  const setVal=()=>{doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(27,37,51);};
+  function title(t){ensure(10);doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(19,51,92);doc.text(t.toUpperCase(),M,y);y+=2;doc.setDrawColor(221,227,236);doc.setLineWidth(0.2);doc.line(M,y,M+CW,y);y+=5;}
+  function pair(l1,v1,l2,v2){const colW=(CW-GAP)/2;const ln1=doc.splitTextToSize(String(v1||'—'),colW);const has2=l2!==null;const ln2=has2?doc.splitTextToSize(String(v2||'—'),colW):[];const h=Math.max(ln1.length,ln2.length)*4+6;ensure(h);setLbl();doc.text(l1.toUpperCase(),M,y);if(has2)doc.text(l2.toUpperCase(),M+colW+GAP,y);setVal();doc.text(ln1,M,y+4);if(has2)doc.text(ln2,M+colW+GAP,y+4);y+=h;}
+  function full(l,v){const ln=doc.splitTextToSize(String(v||'—'),CW);const h=ln.length*4+6;ensure(h);setLbl();doc.text(l.toUpperCase(),M,y);setVal();doc.text(ln,M,y+4);y+=h;}
+  const estado=a.estado||actaEstadoCalc(a);
+  // Encabezado
+  doc.setFont('helvetica','bold');doc.setFontSize(13);doc.setTextColor(19,51,92);doc.text('Gilmedica S.A.S.',M,y+4);
+  doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(100,112,130);doc.text('Acta de reuni\u00f3n · SGC ISO 9001',M,y+9);
+  doc.setFont('helvetica','bold');doc.setFontSize(8);
+  const bt=estado==='aprobada'?'APROBADA':'POR APROBAR';const bw=doc.getTextWidth(bt)+8;
+  const fill=estado==='aprobada'?[227,246,236]:[255,246,224],bd=estado==='aprobada'?[194,234,212]:[244,227,179],tx=estado==='aprobada'?[10,125,77]:[154,103,0];
+  doc.setFillColor(fill[0],fill[1],fill[2]);doc.setDrawColor(bd[0],bd[1],bd[2]);doc.roundedRect(M+CW-bw,y+1,bw,6,3,3,'FD');doc.setTextColor(tx[0],tx[1],tx[2]);doc.text(bt,M+CW-bw+4,y+5);
+  y+=15;doc.setDrawColor(19,51,92);doc.setLineWidth(0.5);doc.line(M,y,M+CW,y);y+=7;
+  // T\u00edtulo
+  doc.setFont('helvetica','bold');doc.setFontSize(13);doc.setTextColor(27,37,51);
+  const tl=doc.splitTextToSize(`Acta ${a.numero||'(sin n\u00famero)'} · ${comiteNombre(a.comiteId)||''}`,CW);ensure(tl.length*6+4);doc.text(tl,M,y);y+=tl.length*6+3;
+  // Datos
+  title('Datos del acta');
+  pair('# de acta',a.numero,'Comit\u00e9',comiteNombre(a.comiteId));
+  pair('Fecha de reuni\u00f3n',a.fechaReunion,'Duraci\u00f3n',a.duracion);
+  pair('Lugar de reuni\u00f3n',a.lugar,'Estado',estado==='aprobada'?'Aprobada':'Por aprobar');
+  full('Objetivo o tema principal tratado',a.objetivo);
+  if(a.link)full('Link del acta',a.link);
+  // Asistentes
+  title('Asistentes y aprobaci\u00f3n');
+  const asis=a.asistentes||[];
+  if(!asis.length){setVal();ensure(6);doc.text('Sin asistentes registrados.',M,y+3);y+=8;}
+  asis.forEach(x=>{
+    const firm=(x.firma&&x.firma.fecha)?`Aprob\u00f3: ${x.firma.fecha} ${x.firma.hora||''}`:'Aprobaci\u00f3n: pendiente';
+    ensure(14);
+    doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(27,37,51);
+    doc.text(doc.splitTextToSize(`${x.nombre||'(sin nombre)'}${x.cargo?' · '+x.cargo:''}`,CW),M,y+3);y+=5;
+    doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(100,112,130);
+    doc.text(firm,M,y+2);y+=4;
+    if(x.observaciones){const ln=doc.splitTextToSize('Obs.: '+x.observaciones,CW);ensure(ln.length*4+2);doc.text(ln,M,y+2);y+=ln.length*4+1;}
+    y+=2;doc.setDrawColor(238,241,246);doc.setLineWidth(0.1);doc.line(M,y,M+CW,y);y+=3;
+  });
+  // Tareas
+  y+=2;title('Tareas / compromisos');
+  const tareas=a.tareas||[];
+  if(!tareas.length){setVal();ensure(6);doc.text('Sin tareas registradas.',M,y+3);y+=8;}
+  tareas.forEach(t=>{
+    ensure(14);
+    doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(27,37,51);
+    const tt=doc.splitTextToSize('• '+(t.tarea||'(sin descripci\u00f3n)'),CW);doc.text(tt,M,y+3);y+=tt.length*4.5+1;
+    doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(100,112,130);
+    doc.text(`Responsable: ${t.responsable||'—'}  ·  Vence: ${t.fechaVencimiento||'—'}  ·  Estado: ${t.estado==='cerrada'?'Cerrada':'Pendiente'}`,M,y+2);y+=4;
+    if(t.observaciones){const ln=doc.splitTextToSize('Obs.: '+t.observaciones,CW);ensure(ln.length*4+2);doc.text(ln,M,y+2);y+=ln.length*4+1;}
+    y+=3;
+  });
+  // Pie
+  ensure(8);doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(140,150,163);
+  doc.text('Generado por Control Documental · '+fechaHoy(),M,PH-8);
+  doc.save(`Acta_${(a.numero||'sin_numero').toString().replace(/[^\w.-]+/g,'_')}.pdf`);
+  toast('PDF del acta descargado');
+}
 
 /* ---------- init: el arranque depende del estado de autenticación ---------- */
 (function initEmailJS(){try{if(window.emailjs&&window.EMAILJS&&EMAILJS.publicKey)window.emailjs.init({publicKey:EMAILJS.publicKey});}catch(e){}})();
@@ -2659,6 +3099,9 @@ function abrirDeepLink(){
   if(goto==='aprobaciones'||legacy){
     deepLinkDone=true;
     switchTab('aprobaciones');
+  }else if(goto==='actas'){
+    deepLinkDone=true;
+    switchTab('actas');
   }
 }
 window.__onAuth = async function(fbUser){
