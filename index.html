@@ -1133,6 +1133,8 @@ function gdField(f,v){
   const id='gd_'+f.k;
   if(f.type==='usuarios'){const sel=v||[];
     return `<div class="field" style="margin-bottom:14px"><label>${esc(f.h)}</label><div class="gd-users" id="${id}" style="max-height:210px;overflow:auto;border:1px solid var(--border);border-radius:8px;padding:8px">${db.config.usuarios.map(u=>`<label style="display:flex;align-items:center;gap:8px;font-size:13px;padding:3px 2px"><input type="checkbox" value="${u.id}" ${sel.includes(u.id)?'checked':''}> ${esc(u.nombre)}${u.cargo?' \u00b7 '+esc(u.cargo):''}</label>`).join('')||'<span style="color:var(--muted-2);font-size:12px">No hay usuarios. Créalos primero en Usuarios.</span>'}</div></div>`;}
+  if(f.type==='date')
+    return `<div class="field" style="margin-bottom:14px"><label>${esc(f.h)}</label><input type="date" id="${id}" value="${esc(v||'')}"></div>`;
   if(f.type==='select')
     return `<div class="field" style="margin-bottom:14px"><label>${esc(f.h)}</label><select id="${id}">${opt(f.options,v,f.ph||'\u2014 seleccionar \u2014')}</select></div>`;
   if(f.type==='textarea')
@@ -2865,7 +2867,7 @@ function actaHTML(a){
   </fieldset>
 
   <fieldset class="section"><legend>Tareas / compromisos</legend>
-    <div class="pill-actions" style="margin-bottom:10px"><button class="btn sm" type="button" onclick="agregarTareaActa()">＋ Agregar tarea</button></div>
+    <div class="pill-actions" style="margin-bottom:10px"><button class="btn sm" type="button" onclick="editarTareaModal(-1)">＋ Agregar tarea</button></div>
     <div style="overflow-x:auto"><table id="tareasTable"><thead><tr>
       <th>Tarea</th><th style="width:150px">Responsable</th><th style="width:140px">Vence</th><th style="width:120px">Estado</th><th>Observaciones</th><th style="width:36px"></th>
     </tr></thead><tbody>${tareasRowsHTML(a)}</tbody></table></div>
@@ -2964,18 +2966,42 @@ function quitarFirmaAsistente(i){syncActaFromDOM();syncAsisFromDOM();syncTareasF
 
 /* ---- Tareas ---- */
 function autoGrow(el){el.style.height='auto';el.style.height=Math.min(240,el.scrollHeight+2)+'px';}
-function filasTexto(t){return Math.min(8,Math.max(2,String(t||'').split('\n').length,Math.ceil(String(t||'').length/40)));}
+function todayISO(){return new Date().toISOString().slice(0,10);}
+function tareaEstadoBadge(t){
+  if(t.estado==='cerrada')return '<span class="badge badge-verde">Cerrada</span>';
+  const venc=t.fechaVencimiento && t.fechaVencimiento<todayISO();
+  return venc?'<span class="badge badge-rojo">Vencida</span>':'<span class="badge badge-amarillo">Pendiente</span>';
+}
 function tareasRowsHTML(a){
   const ts=a.tareas||[];
   if(!ts.length)return '<tr><td colspan="6"><div class="empty" style="padding:16px">Sin tareas registradas.</div></td></tr>';
   return ts.map((t,i)=>`<tr>
-    <td><textarea id="tk_tarea_${i}" rows="${filasTexto(t.tarea)}" oninput="autoGrow(this)" style="width:100%;resize:vertical;overflow:hidden;min-height:40px;line-height:1.35">${esc(t.tarea||'')}</textarea></td>
-    <td><input id="tk_resp_${i}" value="${esc(t.responsable||'')}"></td>
-    <td><input type="date" id="tk_venc_${i}" value="${esc(t.fechaVencimiento||'')}"></td>
-    <td><select id="tk_estado_${i}"><option value="pendiente" ${t.estado!=='cerrada'?'selected':''}>Pendiente</option><option value="cerrada" ${t.estado==='cerrada'?'selected':''}>Cerrada</option></select></td>
-    <td><textarea id="tk_obs_${i}" rows="${filasTexto(t.observaciones)}" oninput="autoGrow(this)" style="width:100%;resize:vertical;overflow:hidden;min-height:40px;line-height:1.35">${esc(t.observaciones||'')}</textarea></td>
-    <td style="text-align:right;vertical-align:top"><button class="btn danger sm" type="button" onclick="quitarTareaActa(${i})">✕</button></td>
+    <td style="white-space:pre-wrap;vertical-align:top;font-weight:600">${esc(t.tarea||'')}</td>
+    <td style="vertical-align:top">${esc(t.responsable||'—')}</td>
+    <td style="vertical-align:top;white-space:nowrap">${esc(t.fechaVencimiento||'—')}</td>
+    <td style="vertical-align:top">${tareaEstadoBadge(t)}</td>
+    <td style="white-space:pre-wrap;vertical-align:top;color:var(--muted)">${esc(t.observaciones||'')}</td>
+    <td style="text-align:right;vertical-align:top;white-space:nowrap"><button class="ed" title="Editar" onclick="editarTareaModal(${i})">✎</button> <button class="btn danger sm" title="Eliminar" onclick="quitarTareaActa(${i})">✕</button></td>
   </tr>`).join('');
+}
+function editarTareaModal(i){
+  syncActaFromDOM();syncAsisFromDOM();
+  const nueva=i<0;
+  const t=nueva?{tid:uid(),tarea:'',responsable:'',fechaVencimiento:'',estado:'pendiente',observaciones:''}:JSON.parse(JSON.stringify(actaCtx.draft.tareas[i]));
+  const fields=[
+    {k:'tarea',h:'Tarea',type:'textarea'},
+    {k:'responsable',h:'Responsable',type:'text'},
+    {k:'fechaVencimiento',h:'Fecha de vencimiento',type:'date'},
+    {k:'estado',h:'Estado',type:'select',options:[{id:'pendiente',nombre:'Pendiente'},{id:'cerrada',nombre:'Cerrada'}]},
+    {k:'observaciones',h:'Observaciones',type:'textarea'}
+  ];
+  gdModal(nueva?'Nueva tarea':'Editar tarea','',fields,t,(d)=>{
+    if(!d.tarea){toast('Describe la tarea');return;}
+    if(!d.estado)d.estado='pendiente';
+    if(nueva)actaCtx.draft.tareas.push(d);else actaCtx.draft.tareas[i]=d;
+    closeOverlay('overlayGD');
+    document.querySelector('#tareasTable tbody').innerHTML=tareasRowsHTML(actaCtx.draft);
+  });
 }
 function syncTareasFromDOM(){
   const ts=actaCtx.draft.tareas||[],g=id=>document.getElementById(id);
@@ -3097,6 +3123,16 @@ function construirPDFActa(JsPDF,a){
     doc.text(doc.splitTextToSize(`${x.nombre||'(sin nombre)'}${x.cargo?' · '+x.cargo:''}`,CW),M,y+3);y+=5;
     doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(100,112,130);
     doc.text(firm,M,y+2);y+=4;
+    if(x.firma&&x.firma.firmaImg){
+      try{
+        const p=doc.getImageProperties(x.firma.firmaImg);
+        let w=32,h=w*p.height/p.width,maxH=14;
+        if(h>maxH){h=maxH;w=h*p.width/p.height;}
+        ensure(h+2);
+        doc.addImage(x.firma.firmaImg,(p.fileType||'PNG'),M,y+1,w,h);
+        y+=h+2;
+      }catch(e){}
+    }
     if(x.observaciones){const ln=doc.splitTextToSize('Obs.: '+x.observaciones,CW);ensure(ln.length*4+2);doc.text(ln,M,y+2);y+=ln.length*4+1;}
     y+=2;doc.setDrawColor(238,241,246);doc.setLineWidth(0.1);doc.line(M,y,M+CW,y);y+=3;
   });
