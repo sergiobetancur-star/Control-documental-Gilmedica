@@ -252,9 +252,6 @@
   <span id="syncState" class="sync-pend" title="Estado de sincronización con la nube">Conectando…</span>
   <button class="tool" id="undoBtn" onclick="undo()" title="Deshacer la última acción" disabled>↶ Deshacer</button>
   <button class="tool" id="redoBtn" onclick="redo()" title="Rehacer la acción deshecha" disabled>↷ Rehacer</button>
-  <button class="tool" onclick="exportJSON()" title="Descargar respaldo .json">⬇ Exportar</button>
-  <button class="tool" onclick="document.getElementById('importInput').click()" title="Cargar respaldo .json">⬆ Importar</button>
-  <input id="importInput" type="file" accept="application/json" class="hidden" onchange="importJSON(event)">
   <button class="tool hidden" id="logoutBtn" onclick="logout()" title="Cerrar sesión">⎋ Salir</button>
 </header>
 
@@ -462,6 +459,18 @@
         <h3>Tipos de disposición final</h3>
         <div class="body"><div class="chips" id="chips-disposiciones"></div>
           <div class="addrow"><input id="add-disposiciones" placeholder="Ej. Destrucción, Archivo muerto…"><button class="btn primary sm" onclick="addSimple('disposiciones')">Agregar</button></div></div>
+      </div>
+    </div>
+
+    <div class="dcard" style="margin-top:16px">
+      <h3>Importar / Exportar (JSON)</h3>
+      <div class="body">
+        <p style="margin:0 0 12px;color:var(--muted);font-size:13px">Exporta una copia completa de la información en formato .json, o restaura desde un archivo previamente exportado. <strong>Importar reemplaza todos los datos actuales</strong> por los del archivo.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" onclick="exportJSON()">⬇ Exportar respaldo (JSON)</button>
+          <button class="btn" onclick="document.getElementById('importInput').click()">⬆ Importar respaldo (JSON)</button>
+          <input id="importInput" type="file" accept="application/json" class="hidden" onchange="importJSON(event)">
+        </div>
       </div>
     </div>
 
