@@ -157,6 +157,7 @@
 
   /* ---------- Modal / Ficha ---------- */
   .overlay{position:fixed;inset:0;background:rgba(15,28,46,.45);display:none;z-index:50;align-items:flex-start;justify-content:center;overflow:auto;padding:30px 16px}
+  #overlayFecha,#overlayGD,#overlayConfirm{z-index:70}
   .overlay.open{display:flex}
   .ficha{background:var(--surface);width:100%;max-width:920px;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden;animation:pop .18s ease}
   @keyframes pop{from{transform:translateY(10px);opacity:0}to{transform:none;opacity:1}}
