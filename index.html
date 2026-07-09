@@ -6,9 +6,9 @@
 <title>Control Documental · Gilmedica S.A.S.</title>
 <style>
   :root{
-    --brand:#13335c;            /* navy chrome */
-    --brand-600:#1f4f86;
-    --brand-50:#eef3f9;
+    --brand:#002e6d;            /* azul institucional Gilmedica (navy) */
+    --brand-600:#0075C9;        /* azul Gilmedica (acento) */
+    --brand-50:#e7f1fb;
     --bg:#f4f6f9;
     --surface:#ffffff;
     --border:#dde3ec;
@@ -34,12 +34,15 @@
     background:var(--brand);color:#fff;padding:0 20px;display:flex;align-items:center;
     gap:18px;height:58px;position:sticky;top:0;z-index:40;box-shadow:0 2px 10px rgba(0,0,0,.12)
   }
-  .logo{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.3px}
-  .logo .mark{
-    width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,#3a86c8,#7fd1c0);
-    display:grid;place-items:center;font-weight:800;color:#0c2440;font-size:15px
+  .logo{display:flex;align-items:center;gap:12px;font-weight:700;letter-spacing:.3px}
+  .logo .orbit-logo{display:block;height:38px;width:auto}
+  .logo .brandtag{display:block;font-weight:400;font-size:11px;opacity:.8;letter-spacing:.4px;line-height:1.2}
+  .app-footer{
+    margin:26px auto 30px;padding:16px 20px 0;max-width:1180px;border-top:1px solid var(--border);
+    text-align:center;color:var(--muted-2);font-size:11.5px;line-height:1.7
   }
-  .logo small{display:block;font-weight:400;font-size:11px;opacity:.7;letter-spacing:.5px}
+  .app-footer strong{color:var(--brand);font-weight:700;letter-spacing:.4px}
+  .app-footer a{color:var(--brand-600);text-decoration:none}
   .topbar .spacer{flex:1}
   .topbar .tool{
     background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);color:#fff;
@@ -65,7 +68,7 @@
   @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 
   .module-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;gap:12px;flex-wrap:wrap}
-  .module-head h1{font-size:20px;margin:0;font-weight:700;letter-spacing:-.2px}
+  .module-head h1{font-size:20px;margin:0;font-weight:700;letter-spacing:-.2px;color:var(--brand)}
   .module-head p{margin:2px 0 0;color:var(--muted);font-size:13px}
   .head-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 
@@ -139,7 +142,7 @@
   .grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
   @media(max-width:840px){.grid2{grid-template-columns:1fr}}
   .dcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
-  .dcard h3{margin:0;padding:13px 15px;border-bottom:1px solid var(--border);font-size:14px;font-weight:700}
+  .dcard h3{margin:0;padding:13px 15px;border-bottom:1px solid var(--border);font-size:14px;font-weight:700;color:var(--brand)}
   .dcard h3 .hint{font-weight:400;color:var(--muted);font-size:12px;margin-left:6px}
   .dcard .body{padding:13px 15px}
   .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
@@ -204,10 +207,11 @@
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--text);color:#fff;padding:12px 18px;border-radius:10px;font-size:13.5px;box-shadow:0 10px 30px rgba(0,0,0,.3);z-index:80;opacity:0;pointer-events:none;transition:.25s}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px)}
   .hidden{display:none!important}
-  .login-screen{position:fixed;inset:0;z-index:5000;background:linear-gradient(135deg,#13335c,#0c2440);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:20px}
+  .login-screen{position:fixed;inset:0;z-index:5000;background:linear-gradient(135deg,#002e6d,#001a40);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:20px}
   .login-card{background:#fff;border-radius:16px;padding:30px 28px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,.3);text-align:center}
-  .login-logo .mark{display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:13px;background:#13335c;color:#fff;font-weight:800;font-size:24px;margin-bottom:10px}
-  .login-card h2{margin:4px 0 2px;font-size:19px;color:#13335c}
+  .login-logo{margin-bottom:6px}
+  .login-logo svg{display:block;margin:0 auto}
+  .login-card h2{margin:4px 0 2px;font-size:19px;color:#002e6d}
   .login-sub{color:#647082;font-size:12.5px;margin-bottom:18px}
   .login-field{text-align:left;margin-bottom:12px}
   .login-field label{display:block;font-size:12px;font-weight:600;color:#39465a;margin-bottom:4px}
@@ -230,9 +234,20 @@
 
 <div id="loginScreen" class="login-screen">
   <div class="login-card">
-    <div class="login-logo"><span class="mark">G</span></div>
-    <h2>Gilmedica S.A.S.</h2>
-    <div class="login-sub">Control documental · SGC ISO 9001</div>
+    <div class="login-logo">
+      <svg viewBox="0 0 400 180" width="200" height="90" xmlns="http://www.w3.org/2000/svg" aria-label="ORBIT">
+        <g transform="rotate(-20 90 90)">
+          <ellipse cx="90" cy="90" rx="55" ry="30" fill="none" stroke="#8dc6e8" stroke-width="2.5"/>
+          <circle cx="132.1" cy="109.3" r="4" fill="#002e6d"/>
+          <circle cx="38.3" cy="79.74" r="4" fill="#002e6d"/>
+          <circle cx="117.5" cy="64.02" r="4" fill="#002e6d"/>
+        </g>
+        <circle cx="90" cy="90" r="26" fill="#0075C9"/>
+        <text x="170" y="102" font-size="40" font-weight="600" letter-spacing="1" fill="#0075C9" font-family="-apple-system,Segoe UI,Roboto,Arial,sans-serif">ORBIT</text>
+      </svg>
+    </div>
+    <h2>Gestión Documental</h2>
+    <div class="login-sub">Gilmedica S.A.S. · SGC ISO 9001</div>
     <div class="login-field"><label>Correo</label><input id="login_email" type="email" autocomplete="username" placeholder="tucorreo@ejemplo.com"></div>
     <div class="login-field"><label>Contraseña</label><input id="login_pass" type="password" autocomplete="current-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
     <div id="loginMsg" class="login-msg"></div>
@@ -244,8 +259,17 @@
 
 <header class="topbar">
   <div class="logo">
-    <span class="mark">G</span>
-    <span>Gilmedica S.A.S.<small>Control documental · SGC ISO 9001</small></span>
+    <svg class="orbit-logo" viewBox="0 0 400 180" xmlns="http://www.w3.org/2000/svg" aria-label="ORBIT">
+      <g transform="rotate(-20 90 90)">
+        <ellipse cx="90" cy="90" rx="55" ry="30" fill="none" stroke="#8dc6e8" stroke-width="2.5"/>
+        <circle cx="132.1" cy="109.3" r="4" fill="#ffffff"/>
+        <circle cx="38.3" cy="79.74" r="4" fill="#ffffff"/>
+        <circle cx="117.5" cy="64.02" r="4" fill="#ffffff"/>
+      </g>
+      <circle cx="90" cy="90" r="26" fill="#0075C9"/>
+      <text x="170" y="102" font-size="40" font-weight="600" letter-spacing="1" fill="#ffffff" font-family="-apple-system,Segoe UI,Roboto,Arial,sans-serif">ORBIT</text>
+    </svg>
+    <span class="brandtag">Gestión Documental<br>Gilmedica S.A.S.</span>
   </div>
   <div class="spacer"></div>
   <span id="userChip" class="user-chip hidden"></span>
@@ -518,6 +542,11 @@
     </table></div></div>
   </section>
 </main>
+
+<footer class="app-footer">
+  <strong>ORBIT — Gestión Documental</strong> · Versión 1.0<br>
+  Diseño por Sergio A. Betancur para Gilmedica S.A.S. · <a href="mailto:calidad@gilmedica.com">calidad@gilmedica.com</a> · 2026
+</footer>
 
 <!-- ====== FICHA (modal) ====== -->
 <div class="overlay" id="overlayFicha">
@@ -2530,7 +2559,7 @@ function solicitar(fase){
   const d=readFicha();
   const map={elaboracion:{rol:'elaboración',resp:d.responsableElaborar},
              revision:{rol:'revisión',resp:d.responsableRevisar},
-             aprobacion:{rol:'aprobación / firma',resp:d.responsableAprobar}};
+             aprobacion:{rol:'aprobación y firma',resp:d.responsableAprobar}};
   const m=map[fase];const u=getUser(m.resp);
   const para = (u&&u.correo)? u.correo : '';
   const enlace = deepLink();
