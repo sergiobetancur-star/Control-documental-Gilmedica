@@ -489,6 +489,15 @@
     </div>
 
     <div class="dcard" style="margin-top:16px">
+      <h3>Contador de correos (EmailJS)</h3>
+      <div class="body">
+        <p style="margin:0 0 12px;color:var(--muted);font-size:13px">EmailJS permite 200 correos gratis al mes (puedes ajustar el límite según tu plan). Este contador registra los correos enviados desde la app y es compartido entre todos los usuarios.</p>
+        <div id="mailStatsInfo"></div>
+        <div style="margin-top:14px"><button class="btn" onclick="reiniciarContadorCorreos()">↺ Reiniciar / definir contador</button></div>
+      </div>
+    </div>
+
+    <div class="dcard" style="margin-top:16px">
       <h3>Importar / Exportar (JSON)</h3>
       <div class="body">
         <p style="margin:0 0 12px;color:var(--muted);font-size:13px">Exporta una copia completa de la información en formato .json, o restaura desde un archivo previamente exportado. <strong>Importar reemplaza todos los datos actuales</strong> por los del archivo.</p>
@@ -933,6 +942,10 @@ function attachRealtime(){
       if(changed)scheduleRerender();
     },err=>console.error('realtime '+name,err));
   });
+  fb.onSnapshot(fb.doc(fb.fdb,'meta','mailstats'),snap=>{
+    mailStats=snap.exists()?snap.data():{count:0,desde:'',limite:200};
+    renderMailStats();
+  },err=>console.error('realtime mailstats',err));
   fb.onSnapshot(fb.doc(fb.fdb,'meta','config'),snap=>{
     if(!snap.exists()||snap.metadata.hasPendingWrites)return;
     const meta=snap.data();const rc=meta.config||{};
@@ -2607,6 +2620,7 @@ function enviarCorreoEmailJS(){
   window.emailjs.send(window.EMAILJS.serviceId,window.EMAILJS.templateId,params)
     .then(()=>{
       toast('Correo enviado a '+mailCtx.para);
+      incMailCount();
       logEvent('Envió solicitud por correo',`${mailCtx.rol} · ${mailCtx.tipo} ${mailCtx.d.codigo||''} → ${mailCtx.para}`);
       closeOverlay('overlayMail');
     })
@@ -2619,7 +2633,7 @@ function enviarCorreoEmailJS(){
    ============================================================ */
 function renderDatos(){
   ['procesos','subprocesos','tiposDocumento','origenes','clasificaciones','recuperaciones','disposiciones'].forEach(renderChips);
-  renderEstados();renderUsuarios();renderPerfiles();renderComites();renderBackupInfo();
+  renderEstados();renderUsuarios();renderPerfiles();renderComites();renderBackupInfo();renderMailStats();
   const el=document.getElementById('mantStats');
   if(el)el.textContent=`Actualmente hay ${db.documentos.length} documento(s) y ${db.registros.length} formato(s) registrados.`;
 }
@@ -2851,6 +2865,37 @@ function renderBackupInfo(){
   const el=document.getElementById('backupInfo');if(!el)return;
   let last='';try{last=localStorage.getItem(BK_FECHA)||'';}catch(e){}
   el.textContent=last?('Último respaldo en este equipo: '+last):'Aún no se ha descargado respaldo en este equipo.';
+}
+/* ---------- Contador de correos enviados (EmailJS · límite configurable) ---------- */
+let mailStats={count:0,desde:'',limite:200};
+function mailLimite(){return (mailStats&&Number(mailStats.limite))>0?Number(mailStats.limite):200;}
+function incMailCount(){
+  try{const fb=window.FB;if(!fb||!fb.increment)return;
+    fb.setDoc(fb.doc(fb.fdb,'meta','mailstats'),{count:fb.increment(1)},{merge:true});
+  }catch(e){console.error('mailcount',e);}
+}
+function renderMailStats(){
+  const el=document.getElementById('mailStatsInfo');if(!el)return;
+  const lim=mailLimite();
+  const c=mailStats.count||0,rest=Math.max(0,lim-c),pct=Math.min(100,Math.round(c/lim*100));
+  const color=c>=lim?'#b3261e':(c>=lim*0.8?'#9a6700':'#0a7d4d');
+  el.innerHTML=`
+    <div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:30px;font-weight:800;color:${color}">${c}</span><span style="color:var(--muted)">/ ${lim} correos</span></div>
+    <div style="height:8px;background:#eef2f7;border-radius:6px;overflow:hidden;margin:8px 0"><div style="height:100%;width:${pct}%;background:${color};transition:width .3s"></div></div>
+    <div style="font-size:12px;color:var(--muted)">Restantes: <strong style="color:${color}">${rest}</strong>${mailStats.desde?' · contando desde '+esc(mailStats.desde):''}</div>`;
+}
+function reiniciarContadorCorreos(){
+  gdModal('Contador de correos','Define el valor inicial del contador y el límite mensual de tu plan de EmailJS.',
+    [{k:'inicio',h:'Iniciar el contador en',type:'num'},{k:'limite',h:'Límite mensual (correos)',type:'num'}],
+    {inicio:mailStats.count||0,limite:mailLimite()},
+    (d)=>{
+      const n=Math.max(0,parseInt(d.inicio,10)||0);
+      const lim=Math.max(1,parseInt(d.limite,10)||200);
+      try{window.FB.setDoc(window.FB.doc(window.FB.fdb,'meta','mailstats'),{count:n,limite:lim,desde:new Date().toISOString().slice(0,10)},{merge:true});}catch(e){}
+      closeOverlay('overlayGD');
+      logEvent&&logEvent('Reinició contador de correos','inicio='+n+' · límite='+lim);
+      toast('Contador actualizado');
+    });
 }
 function importJSON(ev){
   const file=ev.target.files[0];if(!file)return;
@@ -3318,7 +3363,7 @@ window.__onAuth = async function(fbUser){
 </script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
-  import { getFirestore, collection, getDocs, getDoc, doc, setDoc, deleteDoc, writeBatch, onSnapshot, addDoc, query, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+  import { getFirestore, collection, getDocs, getDoc, doc, setDoc, deleteDoc, writeBatch, onSnapshot, addDoc, query, orderBy, limit, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
   import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, setPersistence, indexedDBLocalPersistence } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
   const firebaseConfig = {
     apiKey: "AIzaSyA1x4ey_y3mSOSAt4d3VRxXZdrMaukIHSs",
@@ -3333,7 +3378,7 @@ window.__onAuth = async function(fbUser){
   const fdb = getFirestore(app);
   const auth = getAuth(app);
   setPersistence(auth, indexedDBLocalPersistence).catch(()=>{}); // mantiene la sesión sin usar localStorage
-  window.FB = { app, fdb, auth, collection, getDocs, getDoc, doc, setDoc, deleteDoc, writeBatch, onSnapshot, addDoc, query, orderBy, limit, serverTimestamp,
+  window.FB = { app, fdb, auth, collection, getDocs, getDoc, doc, setDoc, deleteDoc, writeBatch, onSnapshot, addDoc, query, orderBy, limit, serverTimestamp, increment,
     signIn:(e,p)=>signInWithEmailAndPassword(auth,e,p),
     signOut:()=>signOut(auth),
     resetPwd:(e)=>sendPasswordResetEmail(auth,e)
